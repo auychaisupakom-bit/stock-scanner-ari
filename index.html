@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>นับสต๊อก·ari</title>
+<title>นับสต๊อก · Scanner</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
@@ -1179,13 +1179,181 @@
 <body>
 
 <!-- SETUP SCREEN -->
-<div class="setup-screen" id="setup-screen">
+<!-- ═══════════════════════════════════════════════════════════════
+     BRANCH LOGIN PAGE — หน้าเลือกสาขา + ใส่รหัสสาขา (ตาม Image 3)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="setup-screen" id="page-branch-login" style="display:none">
+  <div class="setup-shell">
+    <div class="setup-hero">
+      <div class="setup-logo-fallback" style="display:flex">🏥</div>
+      <div class="setup-title">เข้าสู่ระบบนับสต๊อก</div>
+      <div class="setup-sub">พนักงานประจำสาขา กรุณาเลือกสาขาที่ปฏิบัติการเพื่อยืนยันพิกัดการนับ</div>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-label">🏪 เลือกสาขาของท่าน (Branch Target)</div>
+      <div class="field-wrap select-wrap">
+        <select class="setup-select" id="branch-login-select" aria-label="เลือกสาขา">
+          <option value="">— เลือกสาขา —</option>
+          <option value="ari">สาขาอารีย์</option>
+          <option value="chitlom">สาขาชิดลม</option>
+          <option value="ekkamai">สาขาเอกมัย</option>
+          <option value="phromphong">สาขาพร้อมพงษ์</option>
+          <option value="stlouis">สาขาเซนต์หลุยส์</option>
+          <option value="mochit">สาขาหมอชิต</option>
+        </select>
+        <span class="select-arrow" aria-hidden="true">⌄</span>
+      </div>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-label">🔑 รหัสประจำสาขา (Branch Private Password)</div>
+      <div class="field-wrap">
+        <input class="setup-input clean-input" id="branch-login-pw" type="password" placeholder="กรอกรหัสผ่านเพื่อเข้าทำงาน..." autocomplete="off">
+      </div>
+    </div>
+
+    <button class="setup-start-btn" onclick="verifyBranchLogin()" id="branch-login-btn">
+      <span>ยืนยันการระบุสาขาและเริ่มตรวจเช็ค</span>
+    </button>
+
+    <div style="text-align:center;margin-top:14px">
+      <span style="font-size:12px;color:var(--muted)">สำหรับผู้ดูแลระบบส่วนกลาง: </span>
+      <button onclick="showSuperadminLogin()" style="background:var(--surface);border:1px solid var(--accent);border-radius:8px;padding:6px 14px;color:var(--accent);font-family:'Sarabun',sans-serif;font-size:12px;cursor:pointer;margin-left:6px">เข้าสู่โหมด Superadmin</button>
+    </div>
+
+    <details style="margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px">
+      <summary style="cursor:pointer;font-size:13px;color:var(--accent);font-weight:600">💡 คู่มือแนะนำ (Demo Helper)</summary>
+      <div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7">
+        ในชุดทดสอบ Demo นี้ ทุกสาขาใช้รหัสรูปแบบ <code style="color:var(--accent)">&lt;ชื่อสาขา&gt;1234</code> เช่น:<br>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+          <div onclick="document.getElementById('branch-login-select').value='ari';document.getElementById('branch-login-pw').value='ari1234'" style="background:var(--surface2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:11px">🏪 สาขาอารีย์<br><code style="color:var(--accent)">ari1234</code></div>
+          <div onclick="document.getElementById('branch-login-select').value='chitlom';document.getElementById('branch-login-pw').value='chitlom1234'" style="background:var(--surface2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:11px">🏪 สาขาชิดลม<br><code style="color:var(--accent)">chitlom1234</code></div>
+          <div onclick="document.getElementById('branch-login-select').value='ekkamai';document.getElementById('branch-login-pw').value='ekkamai1234'" style="background:var(--surface2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:11px">🏪 สาขาเอกมัย<br><code style="color:var(--accent)">ekkamai1234</code></div>
+          <div onclick="document.getElementById('branch-login-select').value='phromphong';document.getElementById('branch-login-pw').value='phromphong1234'" style="background:var(--surface2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:11px">🏪 สาขาพร้อมพงษ์<br><code style="color:var(--accent)">phromphong1234</code></div>
+          <div onclick="document.getElementById('branch-login-select').value='stlouis';document.getElementById('branch-login-pw').value='stlouis1234'" style="background:var(--surface2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:11px">🏪 สาขาเซนต์หลุยส์<br><code style="color:var(--accent)">stlouis1234</code></div>
+          <div onclick="document.getElementById('branch-login-select').value='mochit';document.getElementById('branch-login-pw').value='mochit1234'" style="background:var(--surface2);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:11px">🏪 สาขาหมอชิต<br><code style="color:var(--accent)">mochit1234</code></div>
+        </div>
+      </div>
+    </details>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SUPERADMIN LOGIN PAGE (ตาม Image 2)
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="setup-screen" id="page-superadmin-login" style="display:none">
+  <div class="setup-shell">
+    <div class="setup-hero">
+      <div class="setup-logo-fallback" style="display:flex;background:linear-gradient(135deg,#0f172a,#1e293b);color:var(--accent)">🛡️</div>
+      <div class="setup-title">ระบบตรวจสอบสิทธิ์ Superadmin</div>
+      <div class="setup-sub">แผงตั้งค่าและจัดเตรียมข้อมูลสต๊อกสินค้า POS ประจำเดือน</div>
+    </div>
+
+    <div class="setup-card">
+      <div class="setup-label">🔑 รหัสผ่านแอดมินส่วนกลาง (Superadmin Password)</div>
+      <div class="field-wrap">
+        <input class="setup-input clean-input" id="superadmin-pw" type="password" placeholder="กรอกรหัสผ่าน (demo: admin1234)" autocomplete="off">
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px;font-style:italic">*ใช้สำหรับเข้าสิทธิ์จัดการสต๊อกเพื่อปิดทับข้อมูลเก่าหรือล้างรอบประจำเดือน</div>
+    </div>
+
+    <button class="setup-start-btn" onclick="verifySuperadminLogin()">
+      <span>ล็อกอินเข้าดำเนินการ</span>
+    </button>
+
+    <div style="text-align:center;margin-top:12px">
+      <button onclick="showBranchLogin()" style="background:transparent;border:none;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:12px;cursor:pointer">← กลับสู่อินเตอร์เฟสปกติ / หน้าล็อกอินสาขา</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SUPERADMIN PANEL (ตาม Image 1)
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="page-superadmin-panel" style="display:none;min-height:100dvh;background:var(--bg);padding:18px;overflow-y:auto">
+  <div style="max-width:1100px;margin:0 auto">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <button onclick="showBranchLogin()" style="background:transparent;border:none;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:13px;cursor:pointer">← กลับสู่อินเตอร์เฟสปกติ / หน้าล็อกอินสาขา</button>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px">
+      <div style="margin-bottom:18px">
+        <span style="display:inline-block;background:var(--accent);color:var(--bg);font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:8px">Superadmin Mode 🛡️</span>
+        <div style="font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px">แผงโปรแกรมผู้อัปโหลด และจัดพรีเซ็ตตั้งต้นสินค้า</div>
+        <div style="font-size:13px;color:var(--muted)">ป้อนข้อมูลสต๊อก POS <strong style="color:var(--accent)">ทีละสาขา</strong> เพื่อเขียนทับยอดคงเหลือเก่าของสาขานั้น ๆ ก่อนเริ่มตรวจเช็คจริง</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px" id="superadmin-grid">
+        <!-- LEFT: Branch selector + tools -->
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px">1. เลือกสาขาปลายทางที่ต้องการจัดการ:</div>
+          <div class="field-wrap select-wrap" style="margin-bottom:14px">
+            <select class="setup-select" id="sa-target-branch">
+              <option value="ari">สาขาอารีย์</option>
+              <option value="chitlom">สาขาชิดลม</option>
+              <option value="ekkamai">สาขาเอกมัย</option>
+              <option value="phromphong">สาขาพร้อมพงษ์</option>
+              <option value="stlouis">สาขาเซนต์หลุยส์</option>
+              <option value="mochit">สาขาหมอชิต</option>
+            </select>
+            <span class="select-arrow" aria-hidden="true">⌄</span>
+          </div>
+
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:14px">
+            <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">📊 สถานะสาขาที่เลือก:</div>
+            <div id="sa-branch-status" style="font-size:12px;color:var(--muted);line-height:1.7">กำลังตรวจสอบ...</div>
+          </div>
+
+          <button onclick="confirmResetSingleBranch()" style="width:100%;background:rgba(255,82,82,0.08);border:1px solid var(--red);border-radius:10px;padding:10px 14px;color:var(--red);font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;cursor:pointer">🗑️ ล้างยอดนับของสาขานี้ทันที (Reset This Branch)</button>
+        </div>
+
+        <!-- RIGHT: Upload area -->
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:10px">2. อัปโหลดไฟล์ข้อมูลสินค้า POS (รองรับ Excel/Excel XML และ CSV):</div>
+          <div class="upload-zone" onclick="document.getElementById('sa-file-input').click()" style="margin-bottom:0">
+            <div class="upload-icon">📊</div>
+            <div class="upload-text">ลากไฟล์มาวางที่นี่ หรือ คลิกเพื่อเลือกไฟล์จากอุปกรณ์</div>
+            <div class="upload-sub">เฉพาะนามสกุล .xlsx, .xls, .csv เท่านั้น (ขนาดสูงสุด 20MB)</div>
+          </div>
+          <input type="file" id="sa-file-input" accept=".csv,.xlsx,.xls" style="display:none" onchange="superadminUpload(this)">
+          <div id="sa-upload-status" style="margin-top:10px;font-size:12px;color:var(--muted);text-align:center"></div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:18px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">📋 มาตรฐานข้อกำหนดชื่อคอลัมน์ข้อมูลนำเข้า (Data Criteria):</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">ระบบ PharmaCount จะกวาดหาหัวคอลัมน์ Excel บรรทัดบนสุด หากไม่พบฟิลด์ที่กำหนด ระบบจะไม่สามารถจับคู่เก็บลงหลังบ้านได้:</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:700">Product_Code</div><div style="font-size:11px;color:var(--muted);margin-top:4px">รหัสสินค้า POS เช่น MED-PARA500</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:700">Barcode</div><div style="font-size:11px;color:var(--muted);margin-top:4px">หมายเลขบาร์โค้ดสากล 8-13 หลัก</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:700">Product_Name</div><div style="font-size:11px;color:var(--muted);margin-top:4px">ชื่อยา/สินค้า ตัวยา และบรรจุ</div></div>
+          <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px"><div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:700">System_Stock</div><div style="font-size:11px;color:var(--muted);margin-top:4px">ยอดนับคงเหลือตั้งต้นใน POS</div></div>
+        </div>
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">📊 สรุปสถานะทุกสาขา:</div>
+        <div id="sa-all-branches-status" style="font-size:12px;color:var(--muted)">กำลังโหลด...</div>
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:14px">
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">📍 ส่งออกข้อมูลโซน (Zone Map สำหรับทำ Planogram)</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">ดาวน์โหลดข้อมูล "สินค้าอยู่โซนไหน" ของทุกรอบนับ เอาไปวางผังร้าน (Planogram) ได้</div>
+        <button onclick="exportZoneMap()" style="background:var(--accent);border:none;border-radius:10px;padding:10px 16px;color:var(--bg);font-family:'Sarabun',sans-serif;font-size:13px;font-weight:700;cursor:pointer">📥 Export Zone Map (CSV)</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ORIGINAL setup-screen (initially hidden, shown after branch login) -->
+<div class="setup-screen" id="setup-screen" style="display:none">
   <div class="setup-shell">
 
     <div class="setup-hero">
       <img src="./hero-stock.png" alt="นับสต๊อก" class="hero-illustration" onerror="this.style.display='none';document.querySelector('.setup-logo-fallback').style.display='flex';">
       <div class="setup-logo-fallback" style="display:none">💊</div>
-      <div class="setup-title">นับสต๊อก</div>
+      <div class="setup-title" id="setup-branch-title">นับสต๊อก</div>
       <div class="setup-sub">ระบบนับสต๊อกสินค้า<br>ร้านขายยา</div>
     </div>
 
@@ -1213,12 +1381,13 @@
         </span>
         <select class="setup-select" id="setup-zone-select" aria-label="เลือกโซน">
           <option value="">เลือกโซน</option>
+          <option value="หน้าร้าน">หน้าร้าน</option>
+          <option value="หลังร้าน">หลังร้าน</option>
           <option value="โซน A">โซน A</option>
           <option value="โซน B">โซน B</option>
           <option value="โซน C">โซน C</option>
           <option value="โซน D">โซน D</option>
-          <option value="คลังหลัก">คลังหลัก</option>
-          <option value="หน้าร้าน">หน้าร้าน</option>
+          <option value="โซน E">โซน E</option>
         </select>
         <span class="select-arrow" aria-hidden="true">⌄</span>
       </div>
@@ -1262,7 +1431,7 @@
       style="background:transparent;border:none;color:var(--text);font-size:22px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;justify-content:center;border-radius:8px"
       aria-label="เมนู">☰</button>
     <div>
-      <div class="topbar-title">📦 นับสต๊อก</div>
+      <div class="topbar-title" id="topbar-branch-title">📦 นับสต๊อก</div>
       <div class="topbar-sub" id="topbar-sub-text">Handheld Scanner</div>
     </div>
   </div>
@@ -1276,11 +1445,25 @@
 <div id="menu-dropdown" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9998" onclick="closeMenu()">
   <div style="position:absolute;top:60px;left:12px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:6px;min-width:240px;box-shadow:0 10px 40px rgba(0,0,0,0.4);animation:slideUp 0.2s ease"
     onclick="event.stopPropagation()">
-    <button onclick="changeUserZone()"
+    <button onclick="openChangeZoneModal();closeMenu();"
       style="width:100%;text-align:left;background:transparent;border:none;color:var(--text);font-family:'Sarabun',sans-serif;font-size:14px;padding:12px 14px;cursor:pointer;border-radius:10px;display:flex;align-items:center;gap:10px"
       onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
-      <span style="font-size:18px">👤</span>
-      <span>เปลี่ยนผู้นับ / โซน</span>
+      <span style="font-size:18px">📍</span>
+      <span>เปลี่ยนโซนที่กำลังนับ</span>
+    </button>
+    <button id="admin-toggle-btn" onclick="toggleAdminMode();closeMenu();"
+      style="width:100%;text-align:left;background:transparent;border:none;color:var(--accent);font-family:'Sarabun',sans-serif;font-size:14px;padding:12px 14px;cursor:pointer;border-radius:10px;display:flex;align-items:center;gap:10px"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
+      <span style="font-size:18px">🔐</span>
+      <span>Admin Mode (import ไฟล์)</span>
+    </button>
+    <div style="height:1px;background:var(--border);margin:8px 6px"></div>
+    <div id="menu-branch-label" style="font-size:11px;color:var(--muted);padding:4px 14px;text-align:center"></div>
+    <button onclick="logoutBranch();closeMenu();"
+      style="width:100%;text-align:left;background:transparent;border:none;color:var(--red);font-family:'Sarabun',sans-serif;font-size:14px;padding:12px 14px;cursor:pointer;border-radius:10px;display:flex;align-items:center;gap:10px"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='transparent'">
+      <span style="font-size:18px">🚪</span>
+      <span>ออกจากสาขา / เปลี่ยนสาขา</span>
     </button>
   </div>
 </div>
@@ -1395,8 +1578,76 @@
     <input type="hidden" id="note-text" value="">
 
     <button class="btn btn-primary" onclick="saveCount()">✅ บันทึกยอดนับ</button>
+    <button type="button" onclick="openTransferDialog()" id="transfer-trigger-btn"
+      style="width:100%;background:rgba(255,215,64,0.08);border:1px solid var(--yellow);border-radius:12px;padding:10px;color:var(--yellow);font-family:'Sarabun',sans-serif;font-size:13px;cursor:pointer;margin-bottom:12px;display:flex;align-items:center;justify-content:center;gap:6px">
+      🚚 <span id="transfer-trigger-label">บันทึก "ส่งคืนคลัง" (ของกำลังเดินทาง)</span>
+    </button>
     <button class="btn btn-ghost" onclick="cancelScan()">← ยกเลิก / ย้อนกลับ</button>
   </div>
+
+  <!-- TRANSFER OUT MODAL — popup สำหรับใส่จำนวนสินค้าที่ส่งคืนคลัง -->
+<div id="transfer-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:20px"
+  onclick="if(event.target===this)closeTransferDialog()">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:20px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+    <div style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px">🚚 ส่งคืนคลังสินค้า</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">บันทึกจำนวนสินค้าที่ "ส่งคืนคลัง" แต่ของยังเดินทาง — ระบบจะคิด diff ใหม่ให้ถูกต้อง</div>
+
+    <div style="background:var(--surface);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px" id="tm-product">—</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+        <div>ระบบ POS: <strong style="color:var(--text)" id="tm-system">—</strong></div>
+        <div>นับไปแล้ว: <strong style="color:var(--green)" id="tm-counted">0</strong></div>
+        <div style="grid-column:1/-1">บันทึกส่งคืนเดิม: <strong style="color:var(--yellow)" id="tm-current">0</strong></div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px">จำนวนส่งคืนคลัง (กำลังเดินทาง)</div>
+    <input id="tm-input" type="number" min="0" value="0"
+      style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Sarabun',sans-serif;font-size:18px;font-weight:700;outline:none;margin-bottom:14px;text-align:center">
+
+    <div style="background:rgba(0,212,255,0.06);border:1px dashed var(--accent);border-radius:8px;padding:10px;font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+      💡 <strong style="color:var(--accent)">วิธีคิด:</strong> สมมุติ POS แสดง 20 แต่ของกำลังเดินทางคืนคลัง 10 ชิ้น — กรอก "10" ที่นี่ ระบบจะรู้ว่ายอดที่ควรเจอหน้างานคือ 10 ไม่ใช่ 20
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button onclick="closeTransferDialog()" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:14px;cursor:pointer">ยกเลิก</button>
+      <button onclick="saveTransfer()" style="flex:2;background:var(--accent);border:none;border-radius:10px;padding:12px;color:var(--bg);font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer">💾 บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGE ZONE MODAL — เปลี่ยนเฉพาะโซน inline ไม่ต้องกลับหน้า setup -->
+<div id="change-zone-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:20px"
+  onclick="if(event.target===this)closeChangeZoneModal()">
+  <div style="background:var(--bg);border:1px solid var(--border);border-radius:16px;padding:20px;max-width:420px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+    <div style="font-size:18px;font-weight:700;color:var(--accent);margin-bottom:6px">📍 เปลี่ยนโซนที่กำลังนับ</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">ย้ายไปนับโซนใหม่ — ยอดนับเดิมยังอยู่ครบ</div>
+
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px">โซนปัจจุบัน</div>
+    <div id="cz-current" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:13px;margin-bottom:14px">—</div>
+
+    <div style="font-size:12px;color:var(--muted);margin-bottom:6px">เลือกโซนใหม่</div>
+    <select id="cz-zone"
+      style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;color:var(--text);font-family:'Sarabun',sans-serif;font-size:15px;outline:none;margin-bottom:14px;cursor:pointer;appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 12px) 50%;background-size:6px 6px,6px 6px;background-repeat:no-repeat">
+      <option value="หน้าร้าน">หน้าร้าน</option>
+      <option value="หลังร้าน">หลังร้าน</option>
+      <option value="โซน A">โซน A</option>
+      <option value="โซน B">โซน B</option>
+      <option value="โซน C">โซน C</option>
+      <option value="โซน D">โซน D</option>
+      <option value="โซน E">โซน E</option>
+    </select>
+
+    <div style="background:rgba(0,212,255,0.06);border:1px dashed var(--accent);border-radius:8px;padding:10px;font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.6">
+      💡 ระบบจะจดจำว่า "สินค้าตัวไหนถูกนับที่โซนใด" — ข้อมูลนี้จะถูกใช้ทำ Planogram ของสาขาในอนาคต
+    </div>
+
+    <div style="display:flex;gap:8px">
+      <button onclick="closeChangeZoneModal()" style="flex:1;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--muted);font-family:'Sarabun',sans-serif;font-size:14px;cursor:pointer">ยกเลิก</button>
+      <button onclick="applyChangeZone()" style="flex:2;background:var(--accent);border:none;border-radius:10px;padding:12px;color:var(--bg);font-family:'Sarabun',sans-serif;font-size:14px;font-weight:700;cursor:pointer">📍 ใช้และนับต่อ</button>
+    </div>
+  </div>
+</div>
 
   <!-- Modal Popup สำหรับใส่หมายเหตุ -->
   <div id="note-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;align-items:center;justify-content:center;padding:20px"
@@ -1462,14 +1713,23 @@
 
 <!-- ═══ IMPORT PAGE ═══ -->
 <div class="page" id="page-import">
+  <!-- Admin badge -->
+  <div style="background:rgba(0,212,255,0.1);border:1px solid rgba(0,212,255,0.3);border-radius:14px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px">
+    <div style="font-size:20px">🔐</div>
+    <div>
+      <div style="font-size:13px;font-weight:700;color:var(--accent)">Admin Mode — <span id="admin-branch-label"></span></div>
+      <div style="font-size:11px;color:var(--muted);margin-top:2px">อัพโหลดไฟล์ใหม่ได้ที่นี่ — ทุก device ในสาขานี้จะได้ข้อมูลล่าสุดทันที</div>
+    </div>
+  </div>
+
   <div style="background:rgba(0,230,118,0.08);border:1px solid rgba(0,230,118,0.25);border-radius:14px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
     <div style="font-size:24px">✅</div>
     <div>
       <div style="font-size:14px;font-weight:700;color:var(--green)">โหลดข้อมูลสินค้าแล้ว</div>
-      <div style="font-size:12px;color:var(--muted);margin-top:2px">459 SKU · 760 barcodes · ร้าน ari</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:2px"><span id="import-info-text">กำลังโหลด...</span></div>
     </div>
   </div>
-  <div class="section-label">อัปโหลดข้อมูลใหม่ (ถ้าต้องการ)</div>
+  <div class="section-label">อัปโหลดข้อมูลใหม่ (รอบนับครั้งถัดไป)</div>
 
   <div class="upload-zone" onclick="document.getElementById('file-input').click()">
     <div class="upload-icon">📊</div>
@@ -1486,7 +1746,7 @@ A002,ขนมปัง,เบเกอรี่,30
 B001,นมกล่อง,เครื่องดื่ม,120"></textarea>
   </div>
 
-  <button class="btn btn-primary" onclick="importCSV()">📥 นำเข้าข้อมูล</button>
+  <button class="btn btn-primary" onclick="importCSVWithConfirm()">📥 นำเข้าข้อมูลและซิงค์สาขา</button>
 
   <div id="import-status" style="margin-top:12px;font-size:13px;color:var(--muted);text-align:center"></div>
 
@@ -1657,33 +1917,100 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // ─────────────────────────────────────────
+// MULTI-BRANCH CONFIGURATION (hashed passwords)
+// แก้ไขจากเดิม: ลบ URL-based detection ออก, ใช้ login screen แทน
+// รหัสผ่านทั้งหมดเก็บเป็น SHA-256 hash (View Source จะมองไม่เห็นรหัสตรง ๆ)
+// ─────────────────────────────────────────
+const BRANCH_CONFIG = {
+  'ari':        { name: 'สาขาอารีย์',     short: 'ari',        branchPwHash: '0937a7d97cd923f570e836f370d67261352c600215a3c416f986e07f9dfabfdc', adminPwHash:  '0937a7d97cd923f570e836f370d67261352c600215a3c416f986e07f9dfabfdc' },
+  'chitlom':    { name: 'สาขาชิดลม',     short: 'chitlom',    branchPwHash: '62f9b97efdf26799671da58125daff123bcd52e4739eb07b7662f188304974eb', adminPwHash:  '62f9b97efdf26799671da58125daff123bcd52e4739eb07b7662f188304974eb' },
+  'ekkamai':    { name: 'สาขาเอกมัย',     short: 'ekkamai',    branchPwHash: 'b9019f56a2a33842c8a2290c419fcac9f6eb0f1900a5dc2f833a42151ec0fe47', adminPwHash:  'b9019f56a2a33842c8a2290c419fcac9f6eb0f1900a5dc2f833a42151ec0fe47' },
+  'phromphong': { name: 'สาขาพร้อมพงษ์',   short: 'phromphong', branchPwHash: '6531fdfb0f42fd728e1826cb808a55fe93657bdb35c30981e68056136c6b1b25', adminPwHash:  '6531fdfb0f42fd728e1826cb808a55fe93657bdb35c30981e68056136c6b1b25' },
+  'stlouis':    { name: 'สาขาเซนต์หลุยส์',  short: 'stlouis',    branchPwHash: '5e2081c6410ff3dbc4eb2a6359c718e0b05239610ee7e93e184e607d4435a198', adminPwHash:  '5e2081c6410ff3dbc4eb2a6359c718e0b05239610ee7e93e184e607d4435a198' },
+  'mochit':     { name: 'สาขาหมอชิต',     short: 'mochit',     branchPwHash: 'e7ad8aa8e791f9a6c0393bce592b4a964b47cf51a71a0075e97849aa1cdccd71', adminPwHash:  'e7ad8aa8e791f9a6c0393bce592b4a964b47cf51a71a0075e97849aa1cdccd71' }
+};
+const SUPERADMIN_HASH = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';
+
+// State (จะถูก set หลังจาก login เท่านั้น)
+let BRANCH_ID = null;
+let BRANCH = null;
+let IS_SUPERADMIN = false;
+let IS_ADMIN_BRANCH = false;
+let isAdminMode = false;  // เก็บไว้เพื่อ backward compat
+
+// Restore session ถ้ามี
+try {
+  const _saved = sessionStorage.getItem('current_branch');
+  if (_saved && BRANCH_CONFIG[_saved]) {
+    BRANCH_ID = _saved;
+    BRANCH = BRANCH_CONFIG[_saved];
+  }
+  IS_SUPERADMIN = sessionStorage.getItem('superadmin') === '1';
+  IS_ADMIN_BRANCH = BRANCH_ID && sessionStorage.getItem('admin_branch') === BRANCH_ID;
+  isAdminMode = IS_ADMIN_BRANCH;
+} catch(e) {}
+
+// SHA-256 helper สำหรับ verify รหัสผ่าน
+async function sha256(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
+
+// Firebase path prefix แยกตาม branch
+function dbPath(path, branchId) {
+  return 'branches/' + (branchId || BRANCH_ID) + '/' + path;
+}
+
+// Admin toggle (เปิด admin mode ภายในสาขา - สำหรับ import ไฟล์)
+async function toggleAdminMode() {
+  if (!BRANCH_ID) { showToast('ยังไม่ได้เลือกสาขา', 'err'); return; }
+  if (isAdminMode) {
+    isAdminMode = false;
+    IS_ADMIN_BRANCH = false;
+    try { sessionStorage.removeItem('admin_branch'); } catch(e) {}
+    renderAdminUI();
+    showToast('ออกจาก Admin Mode แล้ว', 'ok');
+    return;
+  }
+  const pw = prompt('🔐 ใส่รหัส Admin สาขา ' + BRANCH.name + ':');
+  if (pw === null) return;
+  const h = await sha256(pw);
+  if (h === BRANCH.adminPwHash) {
+    isAdminMode = true;
+    IS_ADMIN_BRANCH = true;
+    try { sessionStorage.setItem('admin_branch', BRANCH_ID); } catch(e) {}
+    renderAdminUI();
+    showToast('✅ เข้าสู่ Admin Mode แล้ว', 'ok');
+  } else {
+    showToast('รหัสไม่ถูกต้อง', 'err');
+  }
+}
+
+function renderAdminUI() {
+  const importTab = document.querySelector('.tab[onclick="switchTab(\'import\')"]');
+  const importPage = document.getElementById('page-import');
+  if (importTab) importTab.style.display = isAdminMode ? '' : 'none';
+  if (importPage && !isAdminMode) {
+    if (importPage.classList.contains('active')) switchTab('scan');
+  }
+  const adminBtn = document.getElementById('admin-toggle-btn');
+  if (adminBtn) {
+    adminBtn.textContent = isAdminMode ? '🔓 ออกจาก Admin Mode' : '🔐 Admin Mode (import ไฟล์)';
+  }
+}
+
+// ─────────────────────────────────────────
 // AUTO-RESET เมื่อขึ้นรอบนับใหม่
 // แต่ละครั้งที่อัปโหลดไฟล์ใหม่ขึ้น GitHub จะ bump ค่านี้
 // ทุกเครื่องที่เปิดแอปจะตรวจเทียบกับค่าที่จำไว้ใน localStorage
 // ถ้าไม่ตรง = รอบใหม่ → ล้างยอดนับทั้งหมด (ทั้ง Firebase กลาง + local)
 // ผู้ใช้/โซนยังจำไว้ ไม่ต้องกรอกใหม่
 // ─────────────────────────────────────────
-const STOCKTAKE_ROUND = '2026-05-17-ari';
-(function maybeResetForNewRound() {
-  try {
-    const last = localStorage.getItem('stock_round');
-    if (last === STOCKTAKE_ROUND) return;  // รอบเดิม ไม่ทำอะไร
-    // ล้าง local (เก็บ stock_user / stock_zone ไว้)
-    ['stock_counts','stock_notes','stock_meta','stock_unknown','stock_products'].forEach(k => {
-      try { localStorage.removeItem(k); } catch(e) {}
-    });
-    // ล้าง Firebase กลาง — เครื่องไหนเข้าก่อนล้างก็ได้ ผลเหมือนกัน
-    try { db.ref('counts').remove(); } catch(e) {}
-    localStorage.setItem('stock_round', STOCKTAKE_ROUND);
-    console.log('🔄 เริ่มรอบนับใหม่:', STOCKTAKE_ROUND);
-  } catch(e) {
-    console.error('reset error:', e);
-  }
-})();
+// (auto-reset round IIFE removed - now handled by maybeResetForNewRound() inside bootBranch)
 
 // sync counts ขึ้น Firebase
 function syncToFirebase(code, qty, productName, zone, user, noteType, noteText) {
-  const ref = db.ref('counts/' + code.replace(/[.#$/[\]]/g, '_'));
+  const ref = db.ref(dbPath('counts/' + code.replace(/[.#$/[]]/g, '_')));
   // สำคัญ: ห้าม fallback เป็น currentUser/currentZone อัตโนมัติ
   // เพราะตอนกดซิงค์รวมจะทำให้ทุกแถวใน Excel กลายเป็นชื่อ/โซนของคนที่ login อยู่
   ref.set({
@@ -1699,7 +2026,30 @@ function syncToFirebase(code, qty, productName, zone, user, noteType, noteText) 
 
 // ฟังการเปลี่ยนแปลงจากคนอื่น real-time
 function startFirebaseListener() {
-  db.ref('counts').on('value', (snapshot) => {
+  // ── รับ product list ใหม่จาก admin (real-time) ──
+  db.ref(dbPath('product_update')).on('value', (snap) => {
+    const data = snap.val();
+    if (!data || !data.products) return;
+    const savedRound = localStorage.getItem('stock_product_round_' + BRANCH_ID);
+    // ถ้าเป็น admin ที่เพิ่ง push เอง ไม่ต้องรีโหลด
+    if (savedRound && String(data.round) === savedRound) return;
+    try {
+      const newProducts = JSON.parse(data.products);
+      if (newProducts && newProducts.length) {
+        products = newProducts;
+        localStorage.setItem(('stock_products_' + BRANCH_ID), JSON.stringify(products));
+        localStorage.setItem('stock_product_round_' + BRANCH_ID, String(data.round));
+        updateBadge();
+        const infoEl = document.getElementById('import-info-text');
+        if (infoEl) infoEl.textContent = products.length + ' SKU · อัพเดทโดย ' + (data.updatedBy || 'admin');
+        showToast('📦 โหลดข้อมูลสินค้าใหม่ ' + products.length + ' รายการ', 'ok');
+        const listPage = document.getElementById('page-list');
+        if (listPage && listPage.classList.contains('active')) renderList();
+      }
+    } catch(e) {}
+  });
+
+  db.ref(dbPath('counts')).on('value', (snapshot) => {
     const data = snapshot.val();
     if (!data) return;
     Object.values(data).forEach(item => {
@@ -1717,9 +2067,9 @@ function startFirebaseListener() {
         }
       }
     });
-    try { localStorage.setItem('stock_counts', JSON.stringify(counts)); } catch(e) {}
-    try { localStorage.setItem('stock_notes',  JSON.stringify(notes));  } catch(e) {}
-    try { localStorage.setItem('stock_meta',   JSON.stringify(countMeta));  } catch(e) {}
+    try { localStorage.setItem(('stock_counts_' + BRANCH_ID), JSON.stringify(counts)); } catch(e) {}
+    try { localStorage.setItem(('stock_notes_' + BRANCH_ID),  JSON.stringify(notes));  } catch(e) {}
+    try { localStorage.setItem(('stock_meta_' + BRANCH_ID),   JSON.stringify(countMeta));  } catch(e) {}
     updateBadge();
     // อัปเดต UI ถ้ากำลังดูรายการอยู่
     const listPage = document.getElementById('page-list');
@@ -1753,34 +2103,14 @@ let selectedZoneChip = '';
 let mergeFiles = [];
 let mergedData = [];
 let unknownCounts = {};
-try { const u2 = localStorage.getItem('stock_unknown'); if(u2) unknownCounts = JSON.parse(u2); } catch(e) {}
-try { const n2 = localStorage.getItem('stock_notes'); if(n2) notes = JSON.parse(n2); } catch(e) {}
-try { const m2 = localStorage.getItem('stock_meta'); if(m2) countMeta = JSON.parse(m2); } catch(e) {}
-
-// Load from localStorage
-try {
-  // Load embedded product data from Excel
-  products = Object.values(EMBEDDED_SKU_MAP).map(p => ({
-    code: p.sku,
-    name: p.name,
-    category: p.uom,
-    systemQty: p.systemQty,
-    barcodes: p.barcodes
-  }));
-  const c = localStorage.getItem('stock_counts');
-  const u = localStorage.getItem('stock_user');
-  const z = localStorage.getItem('stock_zone');
-  if (c) counts   = JSON.parse(c);
-  if (u) currentUser = u;
-  if (z) currentZone = z;
-} catch(e) {}
+// (load from localStorage is now done inside bootBranch())
 
 function save() {
   try {
-    localStorage.setItem('stock_products', JSON.stringify(products));
-    localStorage.setItem('stock_counts',   JSON.stringify(counts));
-    localStorage.setItem('stock_user', currentUser);
-    localStorage.setItem('stock_zone', currentZone);
+    localStorage.setItem(('stock_products_' + BRANCH_ID), JSON.stringify(products));
+    localStorage.setItem(('stock_counts_' + BRANCH_ID),   JSON.stringify(counts));
+    localStorage.setItem(('stock_user_' + BRANCH_ID), currentUser);
+    localStorage.setItem(('stock_zone_' + BRANCH_ID), currentZone);
   } catch(e) {}
   updateBadge();
 }
@@ -1869,26 +2199,17 @@ function startApp() {
   document.getElementById('banner-zone').textContent = currentZone;
   document.getElementById('topbar-sub-text').textContent = 'Handheld Scanner';
   updateBadge();
+  renderAdminUI();
   startFirebaseListener();
   updateOnlineStatus();
 }
 
-// If already set up, skip setup
-if (currentUser && currentZone) {
-  document.getElementById('setup-screen').style.display = 'none';
-  document.getElementById('main-app').style.display = 'flex';
-  document.getElementById('zone-banner').style.display = 'flex';
-  document.getElementById('tabs-and-pages').style.display = 'block';
-  document.getElementById('banner-name').textContent = currentUser;
-  document.getElementById('banner-zone').textContent = currentZone;
-  startFirebaseListener();
-  updateOnlineStatus();
-}
+// (initial branch UI init is now handled by bootBranch() / showMainApp() / showSetupScreen())
 
 function save() {
   try {
-    localStorage.setItem('stock_products', JSON.stringify(products));
-    localStorage.setItem('stock_counts',   JSON.stringify(counts));
+    localStorage.setItem(('stock_products_' + BRANCH_ID), JSON.stringify(products));
+    localStorage.setItem(('stock_counts_' + BRANCH_ID),   JSON.stringify(counts));
   } catch(e) {}
   updateBadge();
 }
@@ -2338,7 +2659,7 @@ function lookupCode(code) {
   checkExpiryBanner(lookupKey);
 
   // เช็ค Firebase ว่ามีคนนับไปแล้วไหม
-  db.ref('counts/' + lookupKey.replace(/[.#$/[\]]/g, '_')).once('value', (snap) => {
+  db.ref(dbPath('counts/' + lookupKey.replace(/[.#$/[]]/g, '_'))).once('value', (snap) => {
     const data = snap.val();
     if (data && data.qty !== undefined) {
       const isSelf = data.user === currentUser;
@@ -2362,16 +2683,25 @@ function lookupCode(code) {
 function updateDiff() {
   if (!currentProduct) return;
   const qty = parseInt(document.getElementById('qty-input').value) || 0;
-  const sys = parseInt(currentProduct.systemQty);
+  const rawSys = parseInt(currentProduct.systemQty);
   const el  = document.getElementById('diff-display');
 
-  if (isNaN(sys)) { el.innerHTML = ''; return; }
+  if (isNaN(rawSys)) { el.innerHTML = ''; return; }
 
-  const diff = qty - sys;
+  // หักของที่ส่งคืนคลัง (กำลังเดินทาง) ออกจากยอดระบบ
+  const code = currentProduct.code;
+  const tOut = transferOut[code] || 0;
+  const effectiveSys = rawSys - tOut;
+  const diff = qty - effectiveSys;
   let cls = diff === 0 ? 'diff-ok' : (Math.abs(diff) <= 2 ? 'diff-warn' : 'diff-err');
   let icon = diff === 0 ? '✅' : (diff > 0 ? '📈' : '📉');
   let label = diff === 0 ? 'ยอดตรง' : (diff > 0 ? `เกิน ${diff} ชิ้น` : `ขาด ${Math.abs(diff)} ชิ้น`);
-  el.innerHTML = `<div class="diff-badge ${cls}">${icon} ${label} (${diff > 0 ? '+' : ''}${diff})</div>`;
+  const transferNote = tOut > 0 ? `<div style="font-size:11px;color:var(--yellow);margin-top:4px">🚚 ส่งคืนคลัง ${tOut} ชิ้น — ยอดที่ควรเจอหน้างาน = ${effectiveSys}</div>` : '';
+  el.innerHTML = `<div class="diff-badge ${cls}">${icon} ${label} (${diff > 0 ? '+' : ''}${diff})</div>${transferNote}`;
+
+  // อัปเดต label ปุ่ม Transfer
+  const trBtn = document.getElementById('transfer-trigger-label');
+  if (trBtn) trBtn.textContent = tOut > 0 ? `บันทึก "ส่งคืนคลัง" — ปัจจุบัน ${tOut} ชิ้น` : 'บันทึก "ส่งคืนคลัง" (ของกำลังเดินทาง)';
 }
 
 function adjustQty(delta) {
@@ -2393,7 +2723,7 @@ function saveCount() {
   } else {
     delete notes[code];
   }
-  try { localStorage.setItem('stock_notes', JSON.stringify(notes)); } catch(e) {}
+  try { localStorage.setItem(('stock_notes_' + BRANCH_ID), JSON.stringify(notes)); } catch(e) {}
 
   // เก็บ metadata ของคนที่นับ - เพื่อให้ report แสดงคนนับจริงได้ถูกต้อง
   countMeta[code] = {
@@ -2401,13 +2731,13 @@ function saveCount() {
     zone: currentZone,
     updatedAt: Date.now(),
   };
-  try { localStorage.setItem('stock_meta', JSON.stringify(countMeta)); } catch(e) {}
+  try { localStorage.setItem(('stock_meta_' + BRANCH_ID), JSON.stringify(countMeta)); } catch(e) {}
 
   if (currentProduct.unknown) {
     const name = document.getElementById('r-custom-name').value.trim() || '(ไม่ระบุชื่อ)';
     currentProduct.name = name;
     unknownCounts[code] = { code, name, qty };
-    try { localStorage.setItem('stock_unknown', JSON.stringify(unknownCounts)); } catch(e) {}
+    try { localStorage.setItem(('stock_unknown_' + BRANCH_ID), JSON.stringify(unknownCounts)); } catch(e) {}
     // sync unknown ขึ้น Firebase ด้วย
     syncToFirebase(code, qty, name, currentZone, currentUser, noteType, noteText);
     showToast(`📝 บันทึก "${name}" ${qty} ชิ้น`, 'warn');
@@ -2416,7 +2746,10 @@ function saveCount() {
     save();
     // sync ขึ้น Firebase real-time
     syncToFirebase(code, qty, currentProduct.name, currentZone, currentUser, noteType, noteText);
-    const diff = isNaN(parseInt(currentProduct.systemQty)) ? null : qty - parseInt(currentProduct.systemQty);
+    const rawSys = parseInt(currentProduct.systemQty);
+    const tOut = transferOut[code] || 0;
+    const effectiveSys = isNaN(rawSys) ? null : rawSys - tOut;
+    const diff = effectiveSys === null ? null : qty - effectiveSys;
     if (diff === null) showToast('💾 บันทึกแล้ว', 'ok');
     else if (diff === 0) showToast('✅ ยอดตรง! บันทึกแล้ว', 'ok');
     else showToast(`⚠️ ต่าง ${diff > 0 ? '+' : ''}${diff} ชิ้น — บันทึกแล้ว`, 'warn');
@@ -2580,9 +2913,21 @@ function importCSV() {
 
   save();
 
-  document.getElementById('import-status').textContent = `✅ นำเข้าสำเร็จ ${products.length} รายการ`;
+  // ── Admin: sync product list ขึ้น Firebase เพื่อให้ทุก device ในสาขาได้ข้อมูลล่าสุด ──
+  try {
+    const round = Date.now();
+    db.ref(dbPath('product_update')).set({
+      products: JSON.stringify(products),
+      round: round,
+      updatedAt: round,
+      updatedBy: currentUser || 'admin'
+    });
+    localStorage.setItem('stock_product_round_' + BRANCH_ID, String(round));
+  } catch(e) {}
+
+  document.getElementById('import-status').textContent = `✅ นำเข้าสำเร็จ ${products.length} รายการ และซิงค์ขึ้น Firebase แล้ว`;
   showPreview();
-  showToast(`นำเข้า ${products.length} รายการ`, 'ok');
+  showToast(`นำเข้า ${products.length} รายการ ✅`, 'ok');
 }
 
 function showPreview() {
@@ -2788,7 +3133,7 @@ function renderUnknown() {
 function clearUnknown() {
   if (!confirm('ล้างรายการนอกระบบทั้งหมด?')) return;
   unknownCounts = {};
-  try { localStorage.removeItem('stock_unknown'); } catch(e) {}
+  try { localStorage.removeItem(('stock_unknown_' + BRANCH_ID)); } catch(e) {}
   renderUnknown();
   showToast('ล้างแล้ว', 'warn');
 }
@@ -2952,7 +3297,7 @@ function exportCSV() {
 
 function exportSummaryText() {
   const date = new Date().toLocaleDateString('th-TH');
-  let text = `📦 ผลนับสต๊อก วันที่ ${date}\n`;
+  let text = `📦 ผลนับสต๊อก ${BRANCH.name} วันที่ ${date}\n`;
   text += '─'.repeat(30) + '\n';
 
   let ok = 0, diffList = [];
@@ -3111,7 +3456,7 @@ function exportMergedText() {
     }
   });
   const zones = [...new Set(mergedData.flatMap(r => r.zones))].join(', ');
-  let text = `📦 ผลนับสต๊อก รวม วันที่ ${date}\n🗂 โซนที่นับ: ${zones}\n${'─'.repeat(30)}\n`;
+  let text = `📦 ผลนับสต๊อก ari รวม วันที่ ${date}\n🗂 โซนที่นับ: ${zones}\n${'─'.repeat(30)}\n`;
   text += `✅ ยอดตรง: ${ok} รายการ\n❌ ยอดต่าง: ${diffList.length} รายการ\n\n`;
   if (diffList.length) text += diffList.join('\n');
   navigator.clipboard.writeText(text).then(() => showToast('คัดลอกแล้ว!', 'ok')).catch(() => showToast('คัดลอกไม่ได้', 'err'));
@@ -3163,6 +3508,637 @@ if (products.length && (currentUser && currentZone)) showPreview();
     bindShelfChips();
   }
 })();
+
+// ═══════════════════════════════════════════════════════════════
+// APPENDED: Multi-branch login + Superadmin + Transfer + Archive
+// ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// NEW: Multi-branch login flow + Superadmin + Transfer + Archive
+// ═══════════════════════════════════════════════════════════════
+
+// ── Page navigation ─────────────────────────────────────────────
+function hideAllPages() {
+  const ids = ['page-branch-login','page-superadmin-login','page-superadmin-panel','setup-screen','main-app','zone-banner','tabs-and-pages'];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function showBranchLogin() {
+  hideAllPages();
+  IS_SUPERADMIN = false;
+  try { sessionStorage.removeItem('superadmin'); } catch(e) {}
+  document.getElementById('page-branch-login').style.display = 'flex';
+}
+
+function showSuperadminLogin() {
+  hideAllPages();
+  document.getElementById('page-superadmin-login').style.display = 'flex';
+  setTimeout(() => { const el = document.getElementById('superadmin-pw'); if (el) el.focus(); }, 100);
+}
+
+function showSuperadminPanel() {
+  hideAllPages();
+  document.getElementById('page-superadmin-panel').style.display = 'block';
+  IS_SUPERADMIN = true;
+  try { sessionStorage.setItem('superadmin','1'); } catch(e) {}
+  refreshSuperadminPanel();
+}
+
+function showSetupScreen() {
+  hideAllPages();
+  const ss = document.getElementById('setup-screen');
+  if (ss) ss.style.display = 'flex';
+
+  // อัปเดต labels ตามสาขา
+  const titleEl = document.getElementById('setup-branch-title');
+  if (titleEl) titleEl.textContent = 'นับสต๊อก ' + BRANCH.short;
+  const sub = document.querySelector('#setup-screen .setup-sub');
+  if (sub) sub.innerHTML = 'ระบบนับสต๊อกสินค้า<br><span style="color:var(--accent);font-weight:700">' + BRANCH.name + '</span>';
+  const nameEl = document.getElementById('setup-name');
+  if (nameEl) nameEl.value = currentUser || '';
+  document.querySelectorAll('.zone-chip').forEach(c => c.classList.remove('selected'));
+}
+
+function showMainApp() {
+  hideAllPages();
+  document.getElementById('main-app').style.display = 'flex';
+  document.getElementById('zone-banner').style.display = 'flex';
+  document.getElementById('tabs-and-pages').style.display = 'block';
+  document.getElementById('banner-name').textContent = currentUser;
+  document.getElementById('banner-zone').textContent = currentZone;
+  const topbarEl = document.getElementById('topbar-branch-title');
+  if (topbarEl) topbarEl.textContent = '📦 นับสต๊อก ' + BRANCH.short;
+  document.title = 'นับสต๊อก ' + BRANCH.short + ' · Scanner';
+
+  const adminBranchLabel = document.getElementById('admin-branch-label');
+  if (adminBranchLabel) adminBranchLabel.textContent = BRANCH.name;
+  const infoEl = document.getElementById('import-info-text');
+  if (infoEl) infoEl.textContent = (products && products.length ? products.length + ' SKU · ' : '') + BRANCH.name;
+  renderAdminUI();
+}
+
+// ── Login verifications ─────────────────────────────────────────
+async function verifyBranchLogin() {
+  const sel = document.getElementById('branch-login-select');
+  const pw  = document.getElementById('branch-login-pw');
+  const branchId = sel.value;
+  const pwVal = pw.value;
+  if (!branchId) { showToast('เลือกสาขาก่อนนะ', 'warn'); return; }
+  if (!pwVal) { showToast('กรอกรหัสสาขา', 'warn'); return; }
+  if (!BRANCH_CONFIG[branchId]) { showToast('สาขาไม่ถูกต้อง', 'err'); return; }
+
+  const btn = document.getElementById('branch-login-btn');
+  if (btn) btn.disabled = true;
+  const h = await sha256(pwVal);
+  if (btn) btn.disabled = false;
+
+  if (h !== BRANCH_CONFIG[branchId].branchPwHash) {
+    showToast('❌ รหัสสาขาไม่ถูกต้อง', 'err');
+    pw.value = '';
+    pw.focus();
+    return;
+  }
+
+  // Login สำเร็จ
+  BRANCH_ID = branchId;
+  BRANCH = BRANCH_CONFIG[branchId];
+  try { sessionStorage.setItem('current_branch', branchId); } catch(e) {}
+  pw.value = '';
+  showToast('✅ เข้าสาขา ' + BRANCH.name + ' สำเร็จ', 'ok');
+  await bootBranch();
+}
+
+async function verifySuperadminLogin() {
+  const pw = document.getElementById('superadmin-pw');
+  const h = await sha256(pw.value);
+  if (h !== SUPERADMIN_HASH) {
+    showToast('❌ รหัส Superadmin ไม่ถูกต้อง', 'err');
+    pw.value = '';
+    pw.focus();
+    return;
+  }
+  pw.value = '';
+  showToast('✅ เข้าสู่โหมด Superadmin', 'ok');
+  showSuperadminPanel();
+}
+
+function logoutBranch() {
+  if (!confirm('ออกจากระบบและกลับไปหน้าเลือกสาขา?')) return;
+  try {
+    sessionStorage.removeItem('current_branch');
+    sessionStorage.removeItem('admin_branch');
+    sessionStorage.removeItem('superadmin');
+  } catch(e) {}
+  BRANCH_ID = null;
+  BRANCH = null;
+  isAdminMode = false;
+  IS_ADMIN_BRANCH = false;
+  currentUser = '';
+  currentZone = '';
+  showBranchLogin();
+}
+
+// ── Boot branch (load data, decide setup vs main) ───────────────
+async function bootBranch() {
+  // โหลดสินค้าจาก embedded
+  products = Object.values(EMBEDDED_SKU_MAP).map(p => ({
+    code: p.sku, name: p.name, category: p.uom,
+    systemQty: p.systemQty, barcodes: p.barcodes
+  }));
+
+  // โหลด localStorage ของสาขานี้
+  try {
+    const c = localStorage.getItem('stock_counts_' + BRANCH_ID);
+    const u = localStorage.getItem('stock_user_' + BRANCH_ID);
+    const z = localStorage.getItem('stock_zone_' + BRANCH_ID);
+    const t = localStorage.getItem('stock_transfer_' + BRANCH_ID);
+    const n2 = localStorage.getItem('stock_notes_' + BRANCH_ID);
+    const m2 = localStorage.getItem('stock_meta_' + BRANCH_ID);
+    const u2 = localStorage.getItem('stock_unknown_' + BRANCH_ID);
+    counts = c ? JSON.parse(c) : {};
+    transferOut = t ? JSON.parse(t) : {};
+    notes = n2 ? JSON.parse(n2) : {};
+    countMeta = m2 ? JSON.parse(m2) : {};
+    unknownCounts = u2 ? JSON.parse(u2) : {};
+    currentUser = u || '';
+    currentZone = z || '';
+  } catch(e) { console.error('load error', e); }
+
+  // ตรวจรอบนับ (มี logic แก้บั๊กล้างข้อมูลด้วย)
+  maybeResetForNewRound();
+
+  // ไปหน้า setup หรือ main app
+  if (currentUser && currentZone) {
+    showMainApp();
+    startFirebaseListener();
+    updateOnlineStatus();
+  } else {
+    showSetupScreen();
+  }
+}
+
+// ── Round rotation (BUG FIX: ไม่ต่อ BRANCH_ID ซ้ำ) ──────────────
+function maybeResetForNewRound() {
+  try {
+    const STOCKTAKE_ROUND = '2026-05-17-' + BRANCH_ID;
+    const last = localStorage.getItem('stock_round_' + BRANCH_ID);
+    if (last === STOCKTAKE_ROUND) return;
+    // ล้าง local — BUG FIX: ไม่ต่อ _BRANCH_ID ซ้ำสองรอบ
+    ['stock_counts','stock_notes','stock_meta','stock_unknown','stock_transfer'].forEach(k => {
+      try { localStorage.removeItem(k + '_' + BRANCH_ID); } catch(e) {}
+    });
+    counts = {}; notes = {}; countMeta = {}; unknownCounts = {}; transferOut = {};
+    try { db.ref(dbPath('counts')).remove(); } catch(e) {}
+    try { db.ref(dbPath('transfer')).remove(); } catch(e) {}
+    localStorage.setItem('stock_round_' + BRANCH_ID, STOCKTAKE_ROUND);
+    console.log('🔄 เริ่มรอบนับใหม่:', STOCKTAKE_ROUND);
+  } catch(e) { console.error('reset error:', e); }
+}
+
+// ── TRANSFER OUT — ปุ่ม "ส่งคืนคลัง" ในหน้าสแกน ─────────────────
+let transferOut = {};  // { code: qty } - สินค้าที่ส่งคืนคลัง
+
+function syncTransferToFirebase(code, qty, productName) {
+  if (!BRANCH_ID) return;
+  const safeKey = code.replace(/[.#$/\[\]]/g, '_');
+  const ref = db.ref(dbPath('transfer/' + safeKey));
+  if (qty > 0) {
+    ref.set({
+      code, qty,
+      name: productName || '',
+      user: currentUser || '',
+      zone: currentZone || '',
+      updatedAt: Date.now()
+    });
+  } else {
+    ref.remove();
+  }
+}
+
+function openTransferDialog() {
+  if (!currentProduct || !currentProduct.code) {
+    showToast('เลือกสินค้าก่อนสแกน', 'warn');
+    return;
+  }
+  const code = currentProduct.code;
+  const current = transferOut[code] || 0;
+  const sys = parseInt(currentProduct.systemQty);
+  const counted = counts[code] || 0;
+
+  const dlg = document.getElementById('transfer-modal');
+  document.getElementById('tm-product').textContent = currentProduct.name || code;
+  document.getElementById('tm-system').textContent = isNaN(sys) ? '—' : sys;
+  document.getElementById('tm-counted').textContent = counted;
+  document.getElementById('tm-current').textContent = current;
+  document.getElementById('tm-input').value = current;
+  dlg.style.display = 'flex';
+}
+
+function closeTransferDialog() {
+  document.getElementById('transfer-modal').style.display = 'none';
+}
+
+function saveTransfer() {
+  if (!currentProduct || !currentProduct.code) return;
+  const code = currentProduct.code;
+  const inputEl = document.getElementById('tm-input');
+  const q = parseInt(inputEl.value);
+  if (isNaN(q) || q < 0) {
+    showToast('กรอกตัวเลขที่ถูกต้อง (≥ 0)', 'warn');
+    inputEl.focus();
+    return;
+  }
+  if (q === 0) {
+    delete transferOut[code];
+  } else {
+    transferOut[code] = q;
+  }
+  try { localStorage.setItem('stock_transfer_' + BRANCH_ID, JSON.stringify(transferOut)); } catch(e) {}
+  syncTransferToFirebase(code, q, currentProduct.name);
+  closeTransferDialog();
+  showToast(q > 0 ? `🚚 บันทึกส่งคืนคลัง ${q} ${currentProduct.category||''}` : 'ล้างยอดส่งคืนคลังแล้ว', 'ok');
+  updateDiff();  // อัปเดต diff display
+  // re-render list ถ้ากำลังดูอยู่
+  const listPage = document.getElementById('page-list');
+  if (listPage && listPage.classList.contains('active') && typeof renderList === 'function') renderList();
+}
+
+function getEffectiveSystemQty(code, rawSystemQty) {
+  // ยอดในระบบจริง = ระบบ POS - ส่งคืนคลัง (ที่ยังเดินทาง)
+  const sys = parseInt(rawSystemQty);
+  if (isNaN(sys)) return rawSystemQty;
+  const t = transferOut[code] || 0;
+  return sys - t;
+}
+
+// ── เปลี่ยนโซน inline (ไม่ต้องกลับหน้า setup, ไม่แก้ชื่อ) ───────
+function openChangeZoneModal() {
+  const dlg = document.getElementById('change-zone-modal');
+  if (!dlg) return;
+  // ตัด suffix " · ชั้น X" ถ้ามี เพื่อให้ select เลือกค่าหลักได้
+  const zoneOnly = (currentZone || '').split(' · ')[0];
+  const cur = document.getElementById('cz-current');
+  if (cur) cur.textContent = currentZone || '—';
+  const zoneSel = document.getElementById('cz-zone');
+  let matched = false;
+  for (const opt of zoneSel.options) {
+    if (opt.value === zoneOnly) { zoneSel.value = zoneOnly; matched = true; break; }
+  }
+  if (!matched && zoneSel.options.length) zoneSel.selectedIndex = 0;
+  dlg.style.display = 'flex';
+}
+
+function closeChangeZoneModal() {
+  const dlg = document.getElementById('change-zone-modal');
+  if (dlg) dlg.style.display = 'none';
+}
+
+function applyChangeZone() {
+  const zone = document.getElementById('cz-zone').value;
+  if (!zone) { showToast('เลือกโซน', 'warn'); return; }
+  if (zone === currentZone) {
+    closeChangeZoneModal();
+    showToast('โซนเดิม - ไม่มีการเปลี่ยนแปลง', 'ok');
+    return;
+  }
+  currentZone = zone;
+  selectedZoneChip = zone;
+  try { localStorage.setItem('stock_zone_' + BRANCH_ID, currentZone); } catch(e) {}
+  // อัปเดต banner ทันที
+  const bz = document.getElementById('banner-zone');
+  if (bz) bz.textContent = currentZone;
+  closeChangeZoneModal();
+  showToast(`📍 ย้ายไปโซน "${zone}" แล้ว — นับต่อได้เลย`, 'ok');
+}
+
+// ── Archive ก่อน reset (เพื่อเก็บประวัติทำ planogram) ───────────
+function archiveCurrentRound() {
+  if (!BRANCH_ID) return;
+  const snap = {
+    archivedAt: Date.now(),
+    branch: BRANCH_ID,
+    products: products,
+    counts: counts,
+    notes: notes,
+    countMeta: countMeta,
+    transferOut: transferOut,
+    unknownCounts: unknownCounts
+  };
+  const key = new Date().toISOString().slice(0,10) + '_' + Date.now();
+  try {
+    db.ref(dbPath('history/' + key)).set(snap);
+  } catch(e) { console.warn('archive failed:', e); }
+}
+
+// ── Superadmin Panel logic ──────────────────────────────────────
+async function refreshSuperadminPanel() {
+  const selectEl = document.getElementById('sa-target-branch');
+  if (!selectEl) return;
+
+  // ผูก event เลือกสาขา
+  selectEl.onchange = () => loadBranchStatus(selectEl.value);
+  loadBranchStatus(selectEl.value);
+  loadAllBranchesStatus();
+}
+
+async function loadBranchStatus(branchId) {
+  const el = document.getElementById('sa-branch-status');
+  if (!el) return;
+  el.innerHTML = 'กำลังโหลด...';
+  try {
+    const [puSnap, cntSnap, trSnap] = await Promise.all([
+      db.ref(dbPath('product_update', branchId)).once('value'),
+      db.ref(dbPath('counts', branchId)).once('value'),
+      db.ref(dbPath('transfer', branchId)).once('value')
+    ]);
+    const pu = puSnap.val();
+    const cnt = cntSnap.val();
+    const tr = trSnap.val();
+    const skuCount = pu && pu.products ? (() => { try { return JSON.parse(pu.products).length; } catch(e) { return 0; } })() : 0;
+    const countedCount = cnt ? Object.keys(cnt).length : 0;
+    const transferCount = tr ? Object.keys(tr).length : 0;
+    const lastUpd = pu && pu.updatedAt ? new Date(pu.updatedAt).toLocaleString('th-TH') : 'ยังไม่เคยอัพโหลด';
+    el.innerHTML = `
+      📦 รายการสินค้าในระบบ: <strong style="color:var(--accent)">${skuCount}</strong> SKU<br>
+      ✅ นับไปแล้ว: <strong style="color:var(--green)">${countedCount}</strong> รายการ<br>
+      🚚 ส่งคืนคลัง (กำลังเดินทาง): <strong style="color:var(--yellow)">${transferCount}</strong> รายการ<br>
+      🕒 อัปเดตล่าสุด: <span style="color:var(--text)">${lastUpd}</span>${pu && pu.updatedBy ? ' โดย ' + pu.updatedBy : ''}
+    `;
+  } catch(e) {
+    el.innerHTML = 'โหลดสถานะไม่สำเร็จ: ' + e.message;
+  }
+}
+
+async function loadAllBranchesStatus() {
+  const el = document.getElementById('sa-all-branches-status');
+  if (!el) return;
+  const rows = [];
+  for (const [id, cfg] of Object.entries(BRANCH_CONFIG)) {
+    try {
+      const [puSnap, cntSnap] = await Promise.all([
+        db.ref(dbPath('product_update', id)).once('value'),
+        db.ref(dbPath('counts', id)).once('value')
+      ]);
+      const pu = puSnap.val();
+      const cnt = cntSnap.val();
+      const skuCount = pu && pu.products ? (() => { try { return JSON.parse(pu.products).length; } catch(e) { return 0; } })() : 0;
+      const countedCount = cnt ? Object.keys(cnt).length : 0;
+      const lastUpd = pu && pu.updatedAt ? new Date(pu.updatedAt).toLocaleDateString('th-TH') : '—';
+      rows.push(`<tr><td style="padding:6px 10px">${cfg.name}</td><td style="padding:6px 10px;text-align:right">${skuCount}</td><td style="padding:6px 10px;text-align:right">${countedCount}</td><td style="padding:6px 10px;text-align:right">${lastUpd}</td></tr>`);
+    } catch(e) {
+      rows.push(`<tr><td style="padding:6px 10px">${cfg.name}</td><td colspan="3" style="padding:6px 10px;color:var(--red)">ผิดพลาด</td></tr>`);
+    }
+  }
+  el.innerHTML = `
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="border-bottom:1px solid var(--border)"><th style="text-align:left;padding:6px 10px">สาขา</th><th style="text-align:right;padding:6px 10px">SKU</th><th style="text-align:right;padding:6px 10px">นับแล้ว</th><th style="text-align:right;padding:6px 10px">อัปเดตล่าสุด</th></tr></thead>
+      <tbody>${rows.join('')}</tbody>
+    </table>
+  `;
+}
+
+function superadminUpload(input) {
+  if (!IS_SUPERADMIN) { showToast('ไม่มีสิทธิ์', 'err'); return; }
+  const file = input.files[0];
+  if (!file) return;
+  const targetBranch = document.getElementById('sa-target-branch').value;
+  if (!targetBranch) { showToast('เลือกสาขาก่อน', 'warn'); return; }
+
+  const statusEl = document.getElementById('sa-upload-status');
+  statusEl.textContent = `กำลังอ่านไฟล์...`;
+
+  const processCSV = (csv) => {
+    const lines = csv.split('\n').map(l => l.trim()).filter(Boolean);
+    if (lines.length < 2) { statusEl.textContent = 'ข้อมูลน้อยเกินไป'; return; }
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'').replace(/_/g,''));
+    const ci = (kws) => { for (const kw of kws) { const i = headers.findIndex(h => h.includes(kw)); if (i >= 0) return i; } return -1; };
+    const codeIdx = ci(['productcode','รหัส','sku','code']);
+    const bcIdx   = ci(['barcode']);
+    const nameIdx = ci(['productname','ชื่อ','name','สินค้า']);
+    const sysIdx  = ci(['systemstock','ยอด','qty','คงเหลือ','จำนวน','stock']);
+
+    if (codeIdx < 0) { statusEl.textContent = '❌ ไม่พบคอลัมน์ Product_Code'; return; }
+
+    const newProducts = lines.slice(1).map(row => {
+      const cols = row.split(',').map(c => c.trim().replace(/^"|"$/g,''));
+      return {
+        code: cols[codeIdx] || '',
+        name: nameIdx >= 0 ? cols[nameIdx] || '' : '',
+        category: '',
+        systemQty: sysIdx >= 0 ? (isNaN(parseInt(cols[sysIdx])) ? cols[sysIdx] : parseInt(cols[sysIdx])) : '—',
+        barcodes: bcIdx >= 0 && cols[bcIdx] ? [cols[bcIdx]] : []
+      };
+    }).filter(p => p.code);
+
+    if (!newProducts.length) { statusEl.textContent = '❌ ไม่พบข้อมูลที่อ่านได้'; return; }
+
+    // ถาม superadmin ว่าจะล้างยอดเก่าหรือไม่
+    const clearOld = confirm(`อัพโหลด ${newProducts.length} รายการเข้า "${BRANCH_CONFIG[targetBranch].name}"\n\nต้องการ "เริ่มรอบใหม่" — ล้างยอดนับเก่าและ archive ประวัติด้วยหรือไม่?\n\n• OK = เริ่มรอบใหม่ ล้างยอดเก่า (archive ก่อน)\n• Cancel = แค่อัพเดตรายการสินค้า ยอดนับเก่ายังอยู่`);
+
+    const round = Date.now();
+    const push = async () => {
+      try {
+        if (clearOld) {
+          // archive ก่อน
+          const [cntSnap, trSnap, mSnap, nSnap, uSnap, puSnap] = await Promise.all([
+            db.ref(dbPath('counts', targetBranch)).once('value'),
+            db.ref(dbPath('transfer', targetBranch)).once('value'),
+            db.ref(dbPath('countMeta', targetBranch)).once('value'),
+            db.ref(dbPath('notes', targetBranch)).once('value'),
+            db.ref(dbPath('unknownCounts', targetBranch)).once('value'),
+            db.ref(dbPath('product_update', targetBranch)).once('value')
+          ]);
+          const archiveKey = new Date().toISOString().slice(0,10) + '_' + Date.now();
+          await db.ref(dbPath('history/' + archiveKey, targetBranch)).set({
+            archivedAt: Date.now(),
+            archivedBy: 'superadmin',
+            counts: cntSnap.val() || {},
+            transfer: trSnap.val() || {},
+            countMeta: mSnap.val() || {},
+            notes: nSnap.val() || {},
+            unknownCounts: uSnap.val() || {},
+            previousProductRound: puSnap.val() ? puSnap.val().round : null
+          });
+          // ล้าง
+          await Promise.all([
+            db.ref(dbPath('counts', targetBranch)).remove(),
+            db.ref(dbPath('transfer', targetBranch)).remove(),
+            db.ref(dbPath('countMeta', targetBranch)).remove()
+          ]);
+        }
+        // push สินค้าใหม่
+        await db.ref(dbPath('product_update', targetBranch)).set({
+          products: JSON.stringify(newProducts),
+          round: round,
+          updatedAt: round,
+          updatedBy: 'superadmin'
+        });
+        statusEl.innerHTML = `✅ อัพโหลด <strong style="color:var(--green)">${newProducts.length}</strong> รายการเข้า ${BRANCH_CONFIG[targetBranch].name} สำเร็จ${clearOld ? ' (ล้างยอดเก่าและ archive แล้ว)' : ''}`;
+        showToast('✅ อัปเดตข้อมูลสาขา', 'ok');
+        loadBranchStatus(targetBranch);
+        loadAllBranchesStatus();
+      } catch(e) {
+        statusEl.textContent = '❌ ผิดพลาด: ' + e.message;
+      }
+    };
+    push();
+  };
+
+  if (file.name.endsWith('.csv')) {
+    const reader = new FileReader();
+    reader.onload = e => processCSV(e.target.result);
+    reader.readAsText(file, 'UTF-8');
+  } else {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const csv = XLSX.utils.sheet_to_csv(ws);
+        processCSV(csv);
+      } catch(err) { statusEl.textContent = '❌ อ่านไฟล์ไม่ได้: ' + err.message; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+  input.value = '';
+}
+
+function confirmResetSingleBranch() {
+  if (!IS_SUPERADMIN) return;
+  const branchId = document.getElementById('sa-target-branch').value;
+  if (!confirm(`⚠️ ล้างยอดนับ + transfer + meta ของ "${BRANCH_CONFIG[branchId].name}" ทั้งหมดทันที?\n\n(จะ archive ประวัติก่อนแล้วล้าง — ไม่กระทบรายการสินค้า)`)) return;
+  (async () => {
+    try {
+      const [cntSnap, trSnap, mSnap] = await Promise.all([
+        db.ref(dbPath('counts', branchId)).once('value'),
+        db.ref(dbPath('transfer', branchId)).once('value'),
+        db.ref(dbPath('countMeta', branchId)).once('value')
+      ]);
+      const archiveKey = new Date().toISOString().slice(0,10) + '_' + Date.now();
+      await db.ref(dbPath('history/' + archiveKey, branchId)).set({
+        archivedAt: Date.now(),
+        archivedBy: 'superadmin-reset',
+        counts: cntSnap.val() || {},
+        transfer: trSnap.val() || {},
+        countMeta: mSnap.val() || {}
+      });
+      await Promise.all([
+        db.ref(dbPath('counts', branchId)).remove(),
+        db.ref(dbPath('transfer', branchId)).remove(),
+        db.ref(dbPath('countMeta', branchId)).remove()
+      ]);
+      showToast('✅ ล้างสาขา ' + BRANCH_CONFIG[branchId].name + ' แล้ว', 'ok');
+      loadBranchStatus(branchId);
+      loadAllBranchesStatus();
+    } catch(e) { showToast('ผิดพลาด: ' + e.message, 'err'); }
+  })();
+}
+
+// (confirmResetAllBranches removed — แต่ละสาขาควรรีเซ็ตคนละช่วงเวลา ใช้ confirmResetSingleBranch แทน)
+
+// ── Export Zone Map (สำหรับทำ Planogram) ────────────────────────
+async function exportZoneMap() {
+  showToast('กำลังรวบรวมข้อมูลโซนทุกสาขา...', 'ok');
+  const rows = [['Branch','SKU','ProductName','UOM','Zone','LastUser','LastUpdate','LastCounted','Round']];
+  for (const branchId of Object.keys(BRANCH_CONFIG)) {
+    try {
+      // ดึงข้อมูลปัจจุบัน
+      const [cntSnap, mSnap, puSnap, histSnap] = await Promise.all([
+        db.ref(dbPath('counts', branchId)).once('value'),
+        db.ref(dbPath('countMeta', branchId)).once('value'),
+        db.ref(dbPath('product_update', branchId)).once('value'),
+        db.ref(dbPath('history', branchId)).once('value')
+      ]);
+      const cnt = cntSnap.val() || {};
+      const meta = mSnap.val() || {};
+      const pu = puSnap.val();
+      const prodMap = {};
+      if (pu && pu.products) {
+        try { JSON.parse(pu.products).forEach(p => prodMap[p.code] = p); } catch(e) {}
+      }
+      const branchName = BRANCH_CONFIG[branchId].name;
+      // เพิ่มรอบปัจจุบัน
+      Object.entries(cnt).forEach(([key, item]) => {
+        if (!item || !item.code) return;
+        const m = meta[key] || {};
+        const prod = prodMap[item.code] || {};
+        rows.push([branchName, item.code, item.name || prod.name || '', prod.category || '', item.zone || m.zone || '', item.user || m.user || '', m.updatedAt ? new Date(m.updatedAt).toISOString() : '', item.qty || 0, 'current']);
+      });
+      // เพิ่มประวัติ
+      const hist = histSnap.val() || {};
+      Object.entries(hist).forEach(([archiveKey, snap]) => {
+        if (!snap || !snap.counts) return;
+        Object.entries(snap.counts).forEach(([key, item]) => {
+          if (!item || !item.code) return;
+          rows.push([branchName, item.code, item.name || '', '', item.zone || '', item.user || '', snap.archivedAt ? new Date(snap.archivedAt).toISOString() : '', item.qty || 0, archiveKey]);
+        });
+      });
+    } catch(e) { console.warn('export error branch', branchId, e); }
+  }
+  // สร้าง CSV
+  const csv = rows.map(r => r.map(v => {
+    const s = String(v == null ? '' : v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+  }).join(',')).join('\n');
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'zone_map_' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast(`✅ ดาวน์โหลด Zone Map (${rows.length - 1} แถว)`, 'ok');
+}
+
+// ── Modified importCSV — ถามก่อนล้างยอดเก่า (ปัญหา 1) ──────────
+async function importCSVWithConfirm() {
+  // เก็บ counts ปัจจุบัน เผื่อต้อง archive
+  const hasCounts = Object.keys(counts).length > 0;
+  if (hasCounts) {
+    const choice = confirm('📦 อัพโหลดไฟล์ใหม่จะส่งผลกับ "' + Object.keys(counts).length + '" รายการที่นับไปแล้ว\n\n• OK = เริ่มรอบใหม่ ล้างยอดนับเก่า (archive ก่อน)\n• Cancel = แค่อัพเดตรายการสินค้า ยอดนับเก่ายังอยู่');
+    if (choice) {
+      archiveCurrentRound();
+      counts = {}; transferOut = {}; countMeta = {}; notes = {}; unknownCounts = {};
+      try {
+        localStorage.removeItem('stock_counts_' + BRANCH_ID);
+        localStorage.removeItem('stock_transfer_' + BRANCH_ID);
+        localStorage.removeItem('stock_meta_' + BRANCH_ID);
+        localStorage.removeItem('stock_notes_' + BRANCH_ID);
+        localStorage.removeItem('stock_unknown_' + BRANCH_ID);
+        db.ref(dbPath('counts')).remove();
+        db.ref(dbPath('transfer')).remove();
+        db.ref(dbPath('countMeta')).remove();
+      } catch(e) {}
+      showToast('🔄 ล้างยอดเก่าและ archive แล้ว', 'ok');
+    }
+  }
+  // call original importCSV
+  importCSV();
+}
+
+// ── Boot at page load ──────────────────────────────────────────
+function initApp() {
+  if (IS_SUPERADMIN) {
+    showSuperadminPanel();
+  } else if (BRANCH_ID && BRANCH) {
+    bootBranch();
+  } else {
+    showBranchLogin();
+  }
+}
+
+// เรียก initApp เมื่อ DOM พร้อม
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
+
 </script>
 </body>
 </html>
