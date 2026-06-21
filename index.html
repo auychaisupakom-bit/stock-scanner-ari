@@ -2252,13 +2252,9 @@ function startApp() {
 
 // (initial branch UI init is now handled by bootBranch() / showMainApp() / showSetupScreen())
 
-function save() {
-  try {
-    localStorage.setItem(('stock_products_' + BRANCH_ID), JSON.stringify(products));
-    localStorage.setItem(('stock_counts_' + BRANCH_ID),   JSON.stringify(counts));
-  } catch(e) {}
-  updateBadge();
-}
+// หมายเหตุ: save() ตัวจริงอยู่ด้านบน (เขียนครบ products/counts/user/zone)
+// เคยมี save() ซ้ำตรงนี้ที่เขียนแค่ products/counts (ขาด user/zone) ซึ่งมา override ตัวที่ถูกต้อง
+// ทำให้เครื่องที่ปิด/รีเฟรชแล้วเปิดใหม่ต้องกรอก setup ใหม่ทุกครั้ง — ลบออกแล้ว
 
 // ─────────────────────────────────────────
 // TABS
