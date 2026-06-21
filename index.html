@@ -2021,6 +2021,16 @@ function syncToFirebase(code, qty, productName, zone, user, noteType, noteText) 
     noteType: noteType || '',
     noteText: noteText || '',
     updatedAt: Date.now()
+  }).then(() => {
+    // เขียนขึ้น Firebase สำเร็จจริง — แสดง indicator สั้นๆ (ไม่รบกวน toast ปกติ)
+    const el = document.getElementById('firebase-status');
+    if (el) { el.textContent = '🟢 ซิงค์แล้ว'; el.style.color = 'var(--green)'; }
+  }).catch((err) => {
+    // เขียนขึ้น Firebase ไม่สำเร็จ — ต้องแจ้งทันที ไม่งั้นข้อมูลจะดูเหมือนบันทึกได้ทั้งที่จริงไม่ขึ้น cloud
+    console.error('syncToFirebase FAILED:', err);
+    showToast('⚠️ บันทึกขึ้นคลาวด์ไม่สำเร็จ! (' + (err && err.code ? err.code : 'unknown') + ') ข้อมูลอยู่แค่ในเครื่องนี้', 'err');
+    const el = document.getElementById('firebase-status');
+    if (el) { el.textContent = '🔴 sync ล้มเหลว'; el.style.color = 'var(--red)'; }
   });
 }
 
@@ -2104,6 +2114,12 @@ function startFirebaseListener() {
     // อัปเดต UI ถ้ากำลังดูรายการอยู่
     const listPage = document.getElementById('page-list');
     if (listPage && listPage.classList.contains('active')) renderList();
+  }, (err) => {
+    // ฟังไม่สำเร็จ (เช่น permission denied) — ต้องแจ้งทันที ไม่งั้นจะดูเหมือนไม่มีคนนับเลยทั้งที่จริง sync พัง
+    console.error('counts listener FAILED:', err);
+    showToast('⚠️ เชื่อมต่อข้อมูลส่วนกลางไม่สำเร็จ — ยอดนับจะไม่ sync กับเครื่องอื่น (' + (err && err.code ? err.code : 'unknown') + ')', 'err');
+    const el = document.getElementById('firebase-status');
+    if (el) { el.textContent = '🔴 sync ล้มเหลว'; el.style.color = 'var(--red)'; }
   });
 }
 
@@ -2701,6 +2717,9 @@ function lookupCode(code) {
       document.getElementById('qty-input').value = data.qty;
       updateDiff();
     }
+  }).catch((err) => {
+    console.error('already-counted check FAILED:', err);
+    showToast('⚠️ เช็คข้อมูลส่วนกลางไม่สำเร็จ (' + (err && err.code ? err.code : 'unknown') + ')', 'err');
   });
 
   document.getElementById('result-card').classList.add('show');
@@ -3327,7 +3346,7 @@ function exportCSV() {
 
 function exportSummaryText() {
   const date = new Date().toLocaleDateString('th-TH');
-  let text = `📦 ผลนับสต๊อก สาขาอารีย์ ${BRANCH.name} วันที่ ${date}\n`;
+  let text = `📦 ผลนับสต๊อก ${BRANCH.name} วันที่ ${date}\n`;
   text += '─'.repeat(30) + '\n';
 
   let ok = 0, diffList = [];
