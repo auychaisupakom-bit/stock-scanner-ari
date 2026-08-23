@@ -2064,6 +2064,13 @@ function startFirebaseListener() {
         const newProducts = JSON.parse(data.products);
         if (newProducts && newProducts.length) {
           products = newProducts;
+          // ดึงข้อมูล LOT / วันหมดอายุ ที่มากับไฟล์ที่อัปโหลดด้วย
+          try {
+            if (data.batches) RUNTIME_BATCHES = JSON.parse(data.batches);
+            if (data.expiry)  RUNTIME_EXPIRY  = JSON.parse(data.expiry);
+            if (data.similar) RUNTIME_SIMILAR = JSON.parse(data.similar);
+            saveRuntimeMaps();
+          } catch(e) {}
           try { localStorage.setItem('stock_products_' + BRANCH_ID, JSON.stringify(products)); } catch(e) {}
           localStorage.setItem('stock_product_round_' + BRANCH_ID, fbRound);
           const listPage = document.getElementById('page-list');
@@ -2279,7 +2286,7 @@ function getExpiryThreshold(sku) {
 }
 
 function getExpiryInfo(sku) {
-  const ts = EXPIRY_MAP[sku];
+  const ts = getExpiryTs(sku);
   if (!ts) return null;
   const exp = new Date(ts);
   const now = new Date();
@@ -2313,7 +2320,7 @@ function renderExpiry() {
   // ขยาย batches ทั้งหมด → แต่ละ batch กลายเป็น 1 แถว
   let items = [];
   products.forEach(p => {
-    const batches = (typeof BATCHES_MAP !== 'undefined') ? BATCHES_MAP[p.code] : null;
+    const batches = getBatches(p.code);
     const skuThreshold = (typeof getExpiryThreshold === 'function') ? getExpiryThreshold(p.code) : 300;
     // ถ้า user ใส่ค่าเอง (>0) ใช้ค่า user; ถ้า 0 ใช้เกณฑ์ของ SKU
     const effThreshold = userInput > 0 ? userInput : skuThreshold;
@@ -2432,7 +2439,7 @@ function checkExpiryBanner(sku) {
   };
 
   // ใช้ BATCHES_MAP ถ้ามี - แสดงทุก batch
-  const batches = (typeof BATCHES_MAP !== 'undefined') ? BATCHES_MAP[sku] : null;
+  const batches = getBatches(sku);
 
   if (batches && batches.length > 0) {
     // กรอง batch ที่เข้าเกณฑ์เตือน
@@ -2661,12 +2668,13 @@ function lookupCode(code) {
   const lookupKey = currentProduct.code || code;
 
   // เช็คว่ามีสินค้าชื่อเดียวกัน SKU อื่นในระบบหรือไม่
-  if (typeof SIMILAR_NAME_MAP !== 'undefined' && lookupKey && SIMILAR_NAME_MAP[lookupKey]) {
-    const sim = SIMILAR_NAME_MAP[lookupKey];
+  const simHit = lookupKey ? getSimilar(lookupKey) : null;
+  if (simHit) {
+    const sim = simHit;
     const otherSkus = sim.others;
     const lines = otherSkus.map(s => {
-      const other = EMBEDDED_SKU_MAP[s];
-      const otherName = other ? other.name.split('\n')[0] : s;
+      const other = products.find(p => p.code === s) || EMBEDDED_SKU_MAP[s];
+      const otherName = other ? String(other.name || '').split('\n')[0] : s;
       const otherQty = other ? other.systemQty : '—';
       return `• SKU <strong style="color:var(--accent)">${s}</strong> — ${otherName} (ยอดระบบ: ${otherQty})`;
     });
@@ -2938,55 +2946,38 @@ function importCSV() {
   const raw = document.getElementById('csv-input').value.trim();
   if (!raw) { showToast('ไม่มีข้อมูล', 'warn'); return; }
 
-  const lines = raw.split('\n').map(l => l.trim()).filter(Boolean);
-  if (lines.length < 2) { showToast('ข้อมูลน้อยเกินไป', 'warn'); return; }
+  // ใช้ parser กลางตัวเดียวกับ Superadmin — รหัส=SKU, รวม LOT, อ่านคอลัมน์ "ระบบ" ได้
+  const parsed = parsePosFile(raw);
+  if (parsed.error) { showToast(parsed.error, 'err'); document.getElementById('import-status').textContent = parsed.error; return; }
+  if (!parsed.products.length) { showToast('ไม่พบข้อมูลที่อ่านได้', 'err'); return; }
 
-  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,''));
-  const rows = lines.slice(1);
-
-  // Auto-detect columns
-  const ci = (keywords) => {
-    for (const kw of keywords) {
-      const idx = headers.findIndex(h => h.includes(kw));
-      if (idx >= 0) return idx;
-    }
-    return -1;
-  };
-
-  const codeIdx = ci(['รหัส','code','barcode','id','sku']);
-  const nameIdx = ci(['ชื่อ','name','สินค้า','product']);
-  const catIdx  = ci(['หมวด','category','cat','ประเภท','type']);
-  const sysIdx  = ci(['ยอด','qty','quantity','stock','คงเหลือ','จำนวน']);
-
-  if (codeIdx < 0) { showToast('ไม่พบคอลัมน์รหัสสินค้า', 'err'); return; }
-
-  products = rows.map(row => {
-    const cols = row.split(',').map(c => c.trim().replace(/^"|"$/g,''));
-    return {
-      code:      cols[codeIdx]  || '',
-      name:      nameIdx >= 0 ? cols[nameIdx] || '' : '',
-      category:  catIdx  >= 0 ? cols[catIdx]  || '' : '',
-      systemQty: sysIdx  >= 0 ? (isNaN(parseInt(cols[sysIdx])) ? cols[sysIdx] : parseInt(cols[sysIdx])) : '—'
-    };
-  }).filter(p => p.code);
+  products = parsed.products;
+  applyParsedMaps(parsed);   // เก็บ LOT / วันหมดอายุ / ชื่อซ้ำ จากไฟล์นี้
 
   save();
 
-  // ── Admin: sync product list ขึ้น Firebase เพื่อให้ทุก device ในสาขาได้ข้อมูลล่าสุด ──
+  // ── sync ขึ้น Firebase ให้ทุก device ในสาขาได้ข้อมูลล่าสุด (รวม LOT ด้วย) ──
   try {
     const round = Date.now();
     db.ref(dbPath('product_update')).set({
       products: JSON.stringify(products),
+      batches:  JSON.stringify(parsed.batches || {}),
+      expiry:   JSON.stringify(parsed.expiry  || {}),
+      similar:  JSON.stringify(parsed.similar || {}),
       round: round,
       updatedAt: round,
       updatedBy: currentUser || 'admin'
     });
     localStorage.setItem('stock_product_round_' + BRANCH_ID, String(round));
+    localStorage.setItem('stock_round_' + BRANCH_ID, String(round));
   } catch(e) {}
 
-  document.getElementById('import-status').textContent = `✅ นำเข้าสำเร็จ ${products.length} รายการ และซิงค์ขึ้น Firebase แล้ว`;
+  const lotCount = Object.values(parsed.batches || {}).reduce((s, a) => s + a.length, 0);
+  document.getElementById('import-status').innerHTML =
+    `✅ อ่านไฟล์ ${parsed.rowCount} แถว → รวมเป็น <strong style="color:var(--accent)">${products.length}</strong> SKU (${lotCount} lots) และซิงค์ขึ้น Firebase แล้ว`;
   showPreview();
-  showToast(`นำเข้า ${products.length} รายการ ✅`, 'ok');
+  renderList();
+  showToast(`นำเข้า ${products.length} SKU ✅`, 'ok');
 }
 
 function showPreview() {
@@ -3074,7 +3065,7 @@ function renderList() {
           const sys  = parseInt(p.systemQty);
           const diff = (cnt !== undefined && !isNaN(sys)) ? cnt - sys : null;
           const dc   = diff === null ? 'd-none' : diff === 0 ? 'd-ok' : Math.abs(diff) <= 2 ? 'd-warn' : 'd-err';
-          const batches = (typeof BATCHES_MAP !== 'undefined') ? BATCHES_MAP[p.code] : null;
+          const batches = getBatches(p.code);
           const hasBatches = batches && batches.length > 0;
           const safeId = `batch-${p.code.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
@@ -3133,7 +3124,7 @@ function toggleBatch(id, code) {
   // ถ้ายังไม่เคยแสดง (placeholder ว่าง) → render content ครั้งแรก
   const td = row.querySelector('td');
   if (code && td && td.children.length === 0) {
-    const batches = (typeof BATCHES_MAP !== 'undefined') ? BATCHES_MAP[code] : null;
+    const batches = getBatches(code);
     if (batches && batches.length > 0) {
       const fmtLot = (s) => {
         if (!s) return '';
@@ -3710,6 +3701,18 @@ async function bootBranch() {
     systemQty: p.systemQty, barcodes: p.barcodes
   }));
 
+  // โหลด LOT / วันหมดอายุ จากไฟล์ที่เคยอัปโหลด (ถ้ามี)
+  loadRuntimeMaps();
+  try {
+    const savedProducts = localStorage.getItem('stock_products_' + BRANCH_ID);
+    const savedRound = parseInt(localStorage.getItem('stock_product_round_' + BRANCH_ID) || '0');
+    // ใช้รายการที่อัปโหลดเอง ก็ต่อเมื่อใหม่กว่าข้อมูลที่ฝังในไฟล์ HTML นี้
+    if (savedProducts && savedRound > EMBEDDED_ROUND) {
+      const arr = JSON.parse(savedProducts);
+      if (arr && arr.length) products = arr;
+    }
+  } catch(e) {}
+
   // โหลด localStorage ของสาขานี้
   try {
     const c = localStorage.getItem('stock_counts_' + BRANCH_ID);
@@ -4031,100 +4034,16 @@ function superadminUpload(input) {
   statusEl.textContent = `กำลังอ่านไฟล์...`;
 
   const processCSV = (csv) => {
-    // แยกเป็นแถว โดยไม่ตัดตรงขึ้นบรรทัดใหม่ที่อยู่ "ในเครื่องหมายคำพูด"
-    // (ชื่อยาบางตัวมี 2 บรรทัดในเซลล์เดียว เช่น ALLOPURINOL TAB100MG50X10S\nALLOPURINOL TAB100MG)
-    const splitRows = (text) => {
-      const rows = []; let cur = ''; let inQ = false;
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        if (ch === '"') { inQ = !inQ; cur += ch; }
-        else if ((ch === '\n' || ch === '\r') && !inQ) {
-          if (ch === '\r' && text[i+1] === '\n') i++;
-          if (cur.trim()) rows.push(cur.trim());
-          cur = '';
-        } else cur += ch;
-      }
-      if (cur.trim()) rows.push(cur.trim());
-      return rows;
-    };
-    const lines = splitRows(csv);
-    if (lines.length < 2) { statusEl.textContent = 'ข้อมูลน้อยเกินไป'; return; }
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'').replace(/_/g,''));
-    const ci = (kws, skip) => {
-      for (const kw of kws) {
-        const i = headers.findIndex((h, idx) => idx !== skip && h.includes(kw));
-        if (i >= 0) return i;
-      }
-      return -1;
-    };
-    // รหัสสินค้า — หา SKU/Product_Code ก่อน
-    const codeIdx = ci(['skunumber','productcode','รหัสสินค้า','รหัส','sku']);
-    // ชื่อสินค้า — ห้ามชนกับคอลัมน์รหัส (เช่น "Product" vs "Product_Code")
-    const nameIdx = ci(['productname','ชื่อสินค้า','ชื่อ','สินค้า','product','name'], codeIdx);
-    // หน่วยนับ
-    const uomIdx  = ci(['uom','หน่วย','unit']);
-    // ยอดคงเหลือ — รองรับทั้ง "ระบบ" "คงเหลือ" "จำนวน" (ทั้งสองแบบสระ) "System_Stock"
-    const sysIdx  = ci(['systemstock','ระบบ','คงเหลือ','จำนวน','จํานวน','ยอด','qty','stock']);
-    // บาร์โค้ด — เก็บทุกคอลัมน์ที่ขึ้นต้นด้วย barcode ยกเว้น Batch Barcode
-    const bcIdxs = headers.map((h, i) => (h.includes('barcode') && !h.includes('batch')) ? i : -1).filter(i => i >= 0);
-
-    if (codeIdx < 0) { statusEl.textContent = '❌ ไม่พบคอลัมน์รหัสสินค้า (SKU Number / Product_Code)'; return; }
-    if (sysIdx < 0)  { statusEl.textContent = '❌ ไม่พบคอลัมน์ยอดคงเหลือ (ระบบ / System_Stock)'; return; }
-
-    // แยก CSV ทีละแถวโดยรองรับ comma ที่อยู่ในเครื่องหมายคำพูด
-    const splitCSV = (row) => {
-      const out = []; let cur = ''; let inQ = false;
-      for (let i = 0; i < row.length; i++) {
-        const ch = row[i];
-        if (ch === '"') { if (inQ && row[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
-        else if (ch === ',' && !inQ) { out.push(cur); cur = ''; }
-        else cur += ch;
-      }
-      out.push(cur);
-      return out.map(c => c.trim());
-    };
-
-    const clean = (s) => {
-      let v = String(s == null ? '' : s).trim();
-      if (v.endsWith('.0')) v = v.slice(0, -2);   // กัน Excel แปลงเลขเป็น float
-      return v;
-    };
-
-    // ── รวมแถวที่เป็น SKU เดียวกัน (ไฟล์ POS มี 1 แถวต่อ 1 LOT) ──
-    const merged = {};
-    lines.slice(1).forEach(row => {
-      const cols = splitCSV(row);
-      const code = clean(cols[codeIdx]);
-      if (!code) return;
-
-      const qtyRaw = parseInt(String(cols[sysIdx]).replace(/[^0-9-]/g, ''));
-      const qty = isNaN(qtyRaw) ? 0 : qtyRaw;
-      const name = nameIdx >= 0 ? String(cols[nameIdx] || '').trim() : '';
-      const uom  = uomIdx  >= 0 ? String(cols[uomIdx]  || '').trim() : '';
-
-      const bcs = [];
-      bcIdxs.forEach(i => {
-        const b = clean(cols[i]);
-        if (b && b !== 'nan' && !bcs.includes(b)) bcs.push(b);
-      });
-
-      if (merged[code]) {
-        merged[code].systemQty += qty;                       // รวมยอดทุก LOT
-        bcs.forEach(b => { if (!merged[code].barcodes.includes(b)) merged[code].barcodes.push(b); });
-        if (!merged[code].name && name) merged[code].name = name;
-      } else {
-        merged[code] = { code, name, category: uom, systemQty: qty, barcodes: bcs };
-      }
-    });
-
-    const newProducts = Object.values(merged);
+    const parsed = parsePosFile(csv);
+    if (parsed.error) { statusEl.textContent = parsed.error; return; }
+    const newProducts = parsed.products;
     if (!newProducts.length) { statusEl.textContent = '❌ ไม่พบข้อมูลที่อ่านได้'; return; }
 
-    const totalRows = lines.length - 1;
-    statusEl.innerHTML = `อ่านไฟล์ได้ ${totalRows} แถว → รวมเป็น <strong style="color:var(--accent)">${newProducts.length}</strong> SKU`;
+    const lotCount = Object.values(parsed.batches || {}).reduce((s, a) => s + a.length, 0);
+    statusEl.innerHTML = `อ่านไฟล์ได้ ${parsed.rowCount} แถว → รวมเป็น <strong style="color:var(--accent)">${newProducts.length}</strong> SKU (${lotCount} lots)`;
 
     // ถาม superadmin ว่าจะล้างยอดเก่าหรือไม่
-    const clearOld = confirm(`อัพโหลด ${newProducts.length} รายการเข้า "${BRANCH_CONFIG[targetBranch].name}"\n\nต้องการ "เริ่มรอบใหม่" — ล้างยอดนับเก่าและ archive ประวัติด้วยหรือไม่?\n\n• OK = เริ่มรอบใหม่ ล้างยอดเก่า (archive ก่อน)\n• Cancel = แค่อัพเดตรายการสินค้า ยอดนับเก่ายังอยู่`);
+    const clearOld = confirm(`อัพโหลด ${newProducts.length} SKU (จาก ${parsed.rowCount} แถว) เข้า "${BRANCH_CONFIG[targetBranch].name}"\n\nต้องการ "เริ่มรอบใหม่" — ล้างยอดนับเก่าและ archive ประวัติด้วยหรือไม่?\n\n• OK = เริ่มรอบใหม่ ล้างยอดเก่า (archive ก่อน)\n• Cancel = แค่อัพเดตรายการสินค้า ยอดนับเก่ายังอยู่`);
 
     const round = Date.now();
     const push = async () => {
@@ -4160,11 +4079,14 @@ function superadminUpload(input) {
         // push สินค้าใหม่
         await db.ref(dbPath('product_update', targetBranch)).set({
           products: JSON.stringify(newProducts),
+          batches:  JSON.stringify(parsed.batches || {}),
+          expiry:   JSON.stringify(parsed.expiry  || {}),
+          similar:  JSON.stringify(parsed.similar || {}),
           round: round,
           updatedAt: round,
           updatedBy: 'superadmin'
         });
-        statusEl.innerHTML = `✅ อัพโหลด <strong style="color:var(--green)">${newProducts.length}</strong> รายการเข้า ${BRANCH_CONFIG[targetBranch].name} สำเร็จ${clearOld ? ' (ล้างยอดเก่าและ archive แล้ว)' : ''}`;
+        statusEl.innerHTML = `✅ อัพโหลด <strong style="color:var(--green)">${newProducts.length}</strong> SKU เข้า ${BRANCH_CONFIG[targetBranch].name} สำเร็จ${clearOld ? ' (ล้างยอดเก่าและ archive แล้ว)' : ''}`;
         showToast('✅ อัปเดตข้อมูลสาขา', 'ok');
         loadBranchStatus(targetBranch);
         loadAllBranchesStatus();
@@ -4307,6 +4229,185 @@ async function importCSVWithConfirm() {
   }
   // call original importCSV
   importCSV();
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// PARSER กลาง — ใช้ร่วมกันทั้ง "นำเข้า" (Admin สาขา) และ Superadmin
+// รองรับไฟล์ POS จริง: 1 แถว = 1 LOT, ชื่อยาอาจมี 2 บรรทัดในเซลล์เดียว
+// คืนค่า { products, batches, expiry, similar, rowCount }
+// ═══════════════════════════════════════════════════════════════
+function parsePosFile(csv) {
+  // แยกแถว โดยไม่ตัดตรงขึ้นบรรทัดใหม่ที่อยู่ใน "..."
+  const splitRows = (text) => {
+    const rows = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch === '"') { inQ = !inQ; cur += ch; }
+      else if ((ch === '\n' || ch === '\r') && !inQ) {
+        if (ch === '\r' && text[i+1] === '\n') i++;
+        if (cur.trim()) rows.push(cur.trim());
+        cur = '';
+      } else cur += ch;
+    }
+    if (cur.trim()) rows.push(cur.trim());
+    return rows;
+  };
+  const splitCols = (row) => {
+    const out = []; let cur = ''; let inQ = false;
+    for (let i = 0; i < row.length; i++) {
+      const ch = row[i];
+      if (ch === '"') { if (inQ && row[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+      else if (ch === ',' && !inQ) { out.push(cur); cur = ''; }
+      else cur += ch;
+    }
+    out.push(cur);
+    return out.map(c => c.trim());
+  };
+  const clean = (s) => {
+    let v = String(s == null ? '' : s).trim();
+    if (v.endsWith('.0')) v = v.slice(0, -2);   // กัน Excel แปลงเลขเป็น float
+    return v;
+  };
+  const toTs = (s) => {
+    const v = String(s || '').trim();
+    if (!v) return null;
+    const d = new Date(v);
+    return isNaN(d) ? null : d.getTime();
+  };
+  const toDate = (s) => {
+    const v = String(s || '').trim();
+    if (!v) return null;
+    const d = new Date(v);
+    return isNaN(d) ? null : d.toISOString().slice(0,10);
+  };
+
+  const lines = splitRows(csv);
+  if (lines.length < 2) return { error: 'ข้อมูลน้อยเกินไป' };
+
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/\s+/g,'').replace(/_/g,''));
+  const ci = (kws, skip) => {
+    for (const kw of kws) {
+      const i = headers.findIndex((h, idx) => idx !== skip && h.includes(kw));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+
+  // รหัสสินค้า — ต้องเป็น SKU ไม่ใช่ barcode (กัน "barcode" ที่มีคำว่า code อยู่ข้างใน)
+  let codeIdx = headers.findIndex(h => h.includes('skunumber') || h.includes('productcode') || h.includes('รหัสสินค้า'));
+  if (codeIdx < 0) codeIdx = headers.findIndex(h => (h.includes('sku') || h.includes('รหัส')) && !h.includes('barcode'));
+  if (codeIdx < 0) codeIdx = headers.findIndex(h => h.includes('code') && !h.includes('barcode'));
+  if (codeIdx < 0) codeIdx = ci(['barcode']);   // ถ้าไม่มี SKU จริง ๆ ค่อยยอมใช้ barcode
+
+  const nameIdx = ci(['productname','ชื่อสินค้า','ชื่อ','สินค้า','product','name'], codeIdx);
+  const uomIdx  = ci(['uom','หน่วย','unit','หมวด','category']);
+  const sysIdx  = ci(['systemstock','ระบบ','คงเหลือ','จำนวน','จํานวน','ยอด','qty','stock']);
+  const lotIdx  = ci(['lotno','lot','ล็อต']);
+  const expIdx  = ci(['expireddate','expiry','exp','วันหมดอายุ','หมดอายุ']);
+  const inIdx   = ci(['datein','วันที่รับ','รับเข้า']);
+  const bbcIdx  = ci(['batchbarcode']);
+  const bcIdxs  = headers.map((h, i) => (h.includes('barcode') && !h.includes('batch') && i !== codeIdx) ? i : -1).filter(i => i >= 0);
+
+  if (codeIdx < 0) return { error: '❌ ไม่พบคอลัมน์รหัสสินค้า (SKU Number / Product_Code)' };
+  if (sysIdx  < 0) return { error: '❌ ไม่พบคอลัมน์ยอดคงเหลือ (ระบบ / System_Stock / คงเหลือ)' };
+
+  const merged = {}, batches = {}, expiry = {};
+
+  lines.slice(1).forEach(row => {
+    const cols = splitCols(row);
+    const code = clean(cols[codeIdx]);
+    if (!code) return;
+
+    const qRaw = parseInt(String(cols[sysIdx]).replace(/[^0-9-]/g, ''));
+    const qty  = isNaN(qRaw) ? 0 : qRaw;
+    const name = nameIdx >= 0 ? String(cols[nameIdx] || '').trim() : '';
+    const uom  = uomIdx  >= 0 ? String(cols[uomIdx]  || '').trim() : '';
+
+    const bcs = [];
+    bcIdxs.forEach(i => {
+      const b = clean(cols[i]);
+      if (b && b !== 'nan' && !bcs.includes(b)) bcs.push(b);
+    });
+
+    // ── รวมแถวที่เป็น SKU เดียวกัน (คนละ LOT) ──
+    if (merged[code]) {
+      merged[code].systemQty += qty;
+      bcs.forEach(b => { if (!merged[code].barcodes.includes(b)) merged[code].barcodes.push(b); });
+      if (!merged[code].name && name) merged[code].name = name;
+    } else {
+      merged[code] = { code, name, category: uom, systemQty: qty, barcodes: bcs };
+    }
+
+    // ── เก็บรายละเอียดแต่ละ LOT ──
+    const expTs = expIdx >= 0 ? toTs(cols[expIdx]) : null;
+    batches[code] = batches[code] || [];
+    batches[code].push({
+      qty: qty,
+      exp: expTs,
+      dateIn:  inIdx  >= 0 ? toDate(cols[inIdx]) : null,
+      batchBC: bbcIdx >= 0 ? String(cols[bbcIdx] || '').trim() : '',
+      lotNo:   lotIdx >= 0 ? String(cols[lotIdx] || '').trim() : ''
+    });
+    if (expTs && (!expiry[code] || expTs < expiry[code])) expiry[code] = expTs;
+  });
+
+  const products = Object.values(merged);
+
+  // ── สินค้าชื่อซ้ำแต่คนละ SKU (เตือนตอนสแกน) ──
+  const byName = {}, similar = {};
+  products.forEach(p => {
+    const n = (p.name || '').split('\n')[0].trim();
+    if (!n) return;
+    (byName[n] = byName[n] || []).push(p.code);
+  });
+  products.forEach(p => {
+    const n = (p.name || '').split('\n')[0].trim();
+    const others = (byName[n] || []).filter(c => c !== p.code);
+    if (others.length) similar[p.code] = { name: n, others };
+  });
+
+  return { products, batches, expiry, similar, rowCount: lines.length - 1 };
+}
+
+// ── ข้อมูล LOT / วันหมดอายุ จากไฟล์ที่อัปโหลด (ทับของที่ฝังใน HTML) ──
+let RUNTIME_BATCHES = {};
+let RUNTIME_EXPIRY  = {};
+let RUNTIME_SIMILAR = {};
+
+function getBatches(code) {
+  if (RUNTIME_BATCHES && RUNTIME_BATCHES[code]) return RUNTIME_BATCHES[code];
+  return (typeof BATCHES_MAP !== 'undefined') ? BATCHES_MAP[code] : null;
+}
+function getExpiryTs(code) {
+  if (RUNTIME_EXPIRY && RUNTIME_EXPIRY[code]) return RUNTIME_EXPIRY[code];
+  return (typeof EXPIRY_MAP !== 'undefined') ? EXPIRY_MAP[code] : null;
+}
+function getSimilar(code) {
+  if (RUNTIME_SIMILAR && RUNTIME_SIMILAR[code]) return RUNTIME_SIMILAR[code];
+  return (typeof SIMILAR_NAME_MAP !== 'undefined') ? SIMILAR_NAME_MAP[code] : null;
+}
+
+// เก็บ/โหลดข้อมูลไฟล์ที่อัปโหลด (ต่อสาขา)
+function saveRuntimeMaps() {
+  try {
+    localStorage.setItem('stock_batches_' + BRANCH_ID, JSON.stringify(RUNTIME_BATCHES));
+    localStorage.setItem('stock_expiry_'  + BRANCH_ID, JSON.stringify(RUNTIME_EXPIRY));
+    localStorage.setItem('stock_similar_' + BRANCH_ID, JSON.stringify(RUNTIME_SIMILAR));
+  } catch(e) {}
+}
+function loadRuntimeMaps() {
+  try {
+    RUNTIME_BATCHES = JSON.parse(localStorage.getItem('stock_batches_' + BRANCH_ID) || '{}');
+    RUNTIME_EXPIRY  = JSON.parse(localStorage.getItem('stock_expiry_'  + BRANCH_ID) || '{}');
+    RUNTIME_SIMILAR = JSON.parse(localStorage.getItem('stock_similar_' + BRANCH_ID) || '{}');
+  } catch(e) { RUNTIME_BATCHES = {}; RUNTIME_EXPIRY = {}; RUNTIME_SIMILAR = {}; }
+}
+function applyParsedMaps(parsed) {
+  RUNTIME_BATCHES = parsed.batches || {};
+  RUNTIME_EXPIRY  = parsed.expiry  || {};
+  RUNTIME_SIMILAR = parsed.similar || {};
+  saveRuntimeMaps();
 }
 
 // ── Boot at page load ──────────────────────────────────────────
